@@ -31,8 +31,13 @@ This workflow was refined over about eighty phases in `../finances`. Its skill, 
 - **`git grep --untracked`** in every search: the coder's new files are untracked until the owner commits.
 - **`ruff format --check .` reads Markdown outside `docs/`** and formats Python code blocks in it.
 
+## Sizing a phase
+
+**Half the size of Phase 1** (the owner's decision, 2026-10-25, after Phase 1: "that was a pretty big phase"). Aim for about 10 requirements, 30 given tests (counting each parameter set), and 3 to 5 public units per spec. This overrides the `finances` starting size. Split each roadmap phase into lettered sub-phases (`2a`, `2b`) up front rather than after a miss.
+
 ## Finding the limit
 
 Record each phase's result, one line each, and turn every miss into a rule above.
 
-- 1 (skeleton: package, settings, the event log (critical), the doctor, two run commands, the check script adapted from `finances`; 20 requirements, 65 given tests, mostly parametrized cases of the event log; three spikes settled Pydantic's `JsonValue` (accepts NaN, so `allow_nan=False`), strict JSON parsing (lax mode turned `"seq":"2"` and a numeric time into valid events), and urllib's proxy use for loopback (it does use `HTTP_PROXY`, so a proxy-free opener); a probe of 11 checks): specified; result pending.
+- 1 (skeleton: package, settings, the event log (critical), the doctor, two run commands, the check script adapted from `finances`; 20 requirements, 65 given tests, mostly parametrized cases of the event log; three spikes settled Pydantic's `JsonValue` (accepts NaN, so `allow_nan=False`), strict JSON parsing (lax mode turned `"seq":"2"` and a numeric time into valid events), and urllib's proxy use for loopback (it does use `HTTP_PROXY`, so a proxy-free opener); a probe of 11 checks): built (70 tests, one deviation: an unpinned `ValueError` text); review not yet recorded. The owner judged it too big: halve later phases (see "Sizing a phase").
+- 2a (contracts, the first spec at the halved size: a pure package of five modules, 12 requirements, 38 given tests, mostly parameter cases; spikes settled that a model-wide `strict=True` refuses lists for tuples (so strict only in `from_json`), that `JsonValue` takes `NaN` from JSON even with `allow_inf_nan=False` (so an own finite check), and that Pydantic's `pattern` is unanchored; a 7-check probe): specified; result pending.

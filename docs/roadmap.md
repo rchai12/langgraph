@@ -1,15 +1,15 @@
 # Roadmap
 
-Each phase is one coding session for a capable coding agent and ends with every check green. A phase too large for one session is split into lettered sub-phases (`5a`, `5b`, ...); numbers are never reused or renumbered. Specs are written one or two phases ahead, from the code that exists.
+Each phase is one coding session for a capable coding agent and ends with every check green. From Phase 2 on, a spec is about half the size of Phase 1 (about 10 requirements and 30 given tests), so most rows below become two or more lettered sub-phases (`2a`, `2b`, ...); numbers are never reused or renumbered. Specs are written one or two phases ahead, from the code that exists.
 
-Status (2026-10-25): Phase 1 is specified. Nothing is built yet.
+Status (2026-10-26): Phase 1 is built (70 tests; its review is pending). Phase 2a is specified.
 
 **Build order:** 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11; 12 and 13 when wanted.
 
 | # | Phase | Outcome | Spec |
 |---|---|---|---|
 | 1 | Skeleton | Installable package, settings that refuse a non-local model host, the event log (critical), `conductor doctor`, `conductor runs list/show`, `scripts/check.py` with sections and a critical coverage gate, test guards (no network, isolated settings) | [phase-01](phases/phase-01-skeleton.md) |
-| 2 | Contracts and the registry | Typed `Route`, `Step`, `Plan`, `TaskSpec`, `TaskResult`, `ApprovalRequest`, `Escalation`; domains and actions declared as data; plan checking against the registry (critical); a `demo` domain for tests | |
+| 2 | Contracts and the registry | Typed `Route`, `Step`, `Plan`, `TaskSpec`, `TaskResult`, `Escalation` (the approval contracts move to Phase 4); domains and actions declared as data; plan checking against the registry (critical); a `demo` domain for tests | [phase-02a](phases/phase-02a-contracts.md) (the contracts); 2b (the registry and plan checking) to come |
 | 3 | Model client | `decide()` over Ollama with a JSON-schema format, fixed sampling, the model digest, and full logging; versioned prompt templates; `ScriptedModel`; invalid output raises; a spike on `qwen3.8`'s structured output with thinking on and off | |
 | 4 | Approvals and escalations store | `conductor.db` with approvals, escalations, and thread leases; the approval policy (critical); `conductor approvals list/show/approve/reject/edit` | |
 | 5 | The supervisor graph | Rules then classifier routing, the planner, plan checking, the approval interrupt and resume, tool and agent steps on the `demo` domain, escalation, the SQLite checkpointer; `conductor ask` and `conductor resume`; LangSmith tracing guarded off. Probably split into 5a (routing and planning nodes) and 5b (graph assembly) | |
