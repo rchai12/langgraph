@@ -1,0 +1,18 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.coverage
+*.egg-info/
+.env
+# runs, event logs, checkpoints, approvals, eval results: they hold prompts, replies, and data from
+# the systems the agent reaches (finance data among them)
+data/
+*.db
+*.sqlite
+*.sqlite3
+
+# macOS Finder
+.DS_Store
+.hypothesis/
