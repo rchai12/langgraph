@@ -1,0 +1,43 @@
+[project]
+name = "conductor"
+version = "0.1.0"
+description = "A supervisor agent on LangGraph and local models, for one household."
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic>=2.14,<3",
+    "pydantic-settings>=2.16,<3",
+    "typer>=0.27,<1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=9.1,<10",
+    "pytest-cov>=7.1,<8",
+    "ruff>=0.17,<0.18",
+]
+
+[project.scripts]
+conductor = "conductor.cli.main:app"
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["docs"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--import-mode=importlib --cov=conductor --cov-branch --cov-report=term-missing"
+
+[tool.coverage.report]
+fail_under = 90
+show_missing = true

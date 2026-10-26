@@ -1,0 +1,4 @@
+# Modules where a bug lets the agent act without approval, lose its record, or accept output it
+# should refuse. Every line and every branch of each must be covered by tests. One path per line,
+# relative to src/conductor/. Read by scripts/check.py.
+events.py
