@@ -10,3 +10,12 @@ The coding agent appends one entry per phase, in the form `docs/phase-convention
   - An invalid event raises ValueError("event is not valid"); the spec requires ValueError and does not pin this text.
 - Follow-ups:
   - None
+
+## Phase 2a: contracts (2026-10-26)
+- Tests: 70 -> 114 (given 38)
+- New public names: `contracts`: `MAX_ATTEMPTS`, `MAX_PROBLEMS`, `MAX_STEPS`, `NOT_FINITE_MESSAGE`, `ONE_DOMAIN_MESSAGE`, `RESULT_MESSAGE`, `ROUTE_MESSAGE`, `Contract`, `DecidedBy`, `Escalation`, `EscalationKind`, `FieldProblem`, `JsonObject`, `Plan`, `Route`, `Step`, `TaskError`, `TaskErrorKind`, `TaskResult`, `TaskSpec`, `TaskStatus`, `problems_from`; `contracts.base`: `Name`, `ActionName`, `RuleId`, `Id`
+- Changed files: 8
+- Deviations:
+  - None
+- Follow-ups:
+  - The working tree also has edits this phase did not make: `.claude/skills/phase-architect/SKILL.md`, `docs/roadmap.md`, and untracked `.claude/skills/phase-architect/phase_status.py`.
