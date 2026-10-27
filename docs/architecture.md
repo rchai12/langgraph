@@ -76,7 +76,7 @@ Each action exists in the routed domain; each step's arguments validate against 
 | `write` | Changes something outside the agent (sends an email, creates an event, commits, pushes) | required |
 | `implement` | Starts a coding agent on a spec | required once; retries after a verifier FAIL are not asked again |
 
-The graph calls `interrupt()` with an `ApprovalRequest` (action, arguments, a summary). The person approves, rejects, or edits the arguments in the terminal or on the approvals page. Both write the decision to the same store, then resume the thread. Edited arguments are validated again before the step runs.
+**Approval is two-stage** (the owner's decision, 2026-10-27): before any step runs, the person approves the plan's shape (every step, its action, and its effect) once; then each `propose`, `write`, or `implement` step stops again just before it runs, with its exact arguments. A request that needs two domains is not planned: it escalates and asks the person to split it (one domain per plan, decided the same day). The graph calls `interrupt()` with an `ApprovalRequest` (action, arguments, a summary). The person approves, rejects, or edits the arguments in the terminal or on the approvals page. Both write the decision to the same store, then resume the thread. Edited arguments are validated again before the step runs.
 
 ### Run a step
 

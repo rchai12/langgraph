@@ -19,3 +19,12 @@ The coding agent appends one entry per phase, in the form `docs/phase-convention
   - None
 - Follow-ups:
   - The working tree also has edits this phase did not make: `.claude/skills/phase-architect/SKILL.md`, `docs/roadmap.md`, and untracked `.claude/skills/phase-architect/phase_status.py`.
+
+## Phase 2b: report checker (2026-10-26)
+- Tests: 114 -> 166 (given 34)
+- New public names: `reports`: `Problem`, `ProgressEntry`, `Finding`, `Review`, `phase_of`, `parse_progress`, `parse_review`, `check_reports`
+- Changed files: 9
+- Deviations:
+  - None
+- Follow-ups:
+  - None

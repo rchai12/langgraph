@@ -2,3 +2,4 @@
 # should refuse. Every line and every branch of each must be covered by tests. One path per line,
 # relative to src/conductor/. Read by scripts/check.py.
 events.py
+reports.py
