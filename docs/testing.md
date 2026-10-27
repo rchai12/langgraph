@@ -29,8 +29,9 @@ A bug here lets the agent act without approval, lose its record, or accept outpu
 
 - `events.py` (the event log; Phase 1)
 - `reports.py` (progress entries and reviews; Phase 2b)
+- `plancheck.py` (plans checked against the registry; Phase 2c)
 
-Planned: plan checking (Phase 2), the approval policy (Phase 4).
+Planned: the approval policy (Phase 4).
 
 ## Commands
 

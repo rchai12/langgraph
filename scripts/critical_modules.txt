@@ -3,3 +3,4 @@
 # relative to src/conductor/. Read by scripts/check.py.
 events.py
 reports.py
+plancheck.py

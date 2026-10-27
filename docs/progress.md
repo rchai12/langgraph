@@ -28,3 +28,12 @@ The coding agent appends one entry per phase, in the form `docs/phase-convention
   - None
 - Follow-ups:
   - None
+
+## Phase 2c: the registry and plan checking (2026-10-27)
+- Tests: 166 -> 202 (given 26)
+- New public names: `registry`: `ActionKind`, `Effect`, `Action`, `Domain`, `RegistryError`, `NotRegistered`, `Registry`; `domains`: `DOMAINS`; `domains.demo`: `EchoArgs`, `EchoResult`, `NoteArgs`, `NoteResult`, `DelegateArgs`, `DelegateResult`, `DOMAIN`; `plancheck`: `PLAN_REJECTED_MESSAGE`, `CheckedStep`, `PlanRejected`, `check_plan`
+- Changed files: 9
+- Deviations:
+  - None
+- Follow-ups:
+  - None
