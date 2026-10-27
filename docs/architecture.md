@@ -13,7 +13,7 @@ The systems the agent reaches are out of scope. This project builds the framewor
 ## Principles
 
 1. **Code decides wherever it can.** Routing rules, the approval policy, retries, dispatch, and validation are code. The model is asked only what code cannot answer: which domain an unrecognized request belongs to, which registered actions a request needs, and how to phrase an answer.
-2. **Every model call is a decision point.** A decision point has a name, a versioned prompt template, a closed output schema (Pydantic, `extra="forbid"`, enumerations for every label), and fixed sampling: temperature 0, a fixed seed, a fixed context size, and a fixed thinking setting. The model is pinned by its digest, and the digest is recorded with every reply.
+2. **Every model call is a decision point.** A decision point has a name, a versioned prompt template, a closed output schema (Pydantic, `extra="forbid"`, enumerations for every label), and fixed sampling: temperature 0, a fixed seed, a fixed context size, and a fixed thinking setting. The framework is model agnostic (the owner's decision, 2026-10-27): the model is a setting, nothing is written for one model, and its digest is recorded with every reply rather than pinned, so a change of model shows in the logs and the evaluation reports.
 3. **Invalid output escalates.** A reply that does not parse or does not validate against its schema stops the run with an escalation the person answers. There is no silent retry and no "best effort" repair. A label of `unknown` (every classifier has one) escalates too.
 4. **The model never names a tool freely.** The planner chooses from the actions a domain registers, through an enumeration built from the registry. A domain sees only its own tools. Arguments are validated against the action's schema before anything runs.
 5. **Every side effect waits for a person**, decided by a policy written in code. The one exception is a coder's retry after the verifier fails its work, inside an implementation the person already approved.
@@ -27,14 +27,14 @@ The systems the agent reaches are out of scope. This project builds the framewor
 | Language | Python 3.12 (`/opt/homebrew/bin/python3.12`) | |
 | Graph | `langgraph` 1.2 | `StateGraph`, `interrupt`, `Command(resume=...)` |
 | Checkpoints | `langgraph-checkpoint-sqlite` 3.1 (`SqliteSaver`) | Threads survive restarts |
-| Models | Ollama on 127.0.0.1, `ollama` Python client 0.6 | `format` = a JSON schema, `options` = temperature, seed, `num_ctx`; `think` set per decision point. No LangChain model wrappers |
+| Models | Ollama on 127.0.0.1, `POST /api/chat` through the standard library's proxy-free `urllib` opener (the owner's decision, 2026-10-27; the `ollama` package reads `OLLAMA_HOST`, `OLLAMA_API_KEY`, and the system proxy unless told not to) | `format` = a JSON schema, `options` = temperature, seed, `num_ctx`, `num_predict`; `think` set per decision point. No LangChain model wrappers |
 | Tools | `mcp` Python SDK 2.x as a client, stdio transport | The same SDK the `finances` server uses |
 | Contracts | `pydantic` 2, `pydantic-settings` 2 | |
 | Commands | `typer` | |
 | Approvals page | FastAPI on 127.0.0.1 (Phase 7) | No scripts from a CDN; the same hardening as `finances`' web UI |
 | Tests / lint | `pytest`, `pytest-cov`, `ruff` | |
 
-Versions found on 2026-10-25 in a scratch environment: langgraph 1.2.17, langgraph-checkpoint 4.3.0, langgraph-checkpoint-sqlite 3.1.2, ollama 0.6.3, mcp 2.3.0, pydantic 2.14.1, pydantic-settings 2.16.1, typer 0.27.3 (click 8.5.0), pytest 9.1.1, pytest-cov 7.1.0, ruff 0.17.2. Each phase adds only the dependencies it needs, with bounds.
+Versions found on 2026-10-25 in a scratch environment: langgraph 1.2.17, langgraph-checkpoint 4.3.0, langgraph-checkpoint-sqlite 3.1.2, mcp 2.3.0, pydantic 2.14.1, pydantic-settings 2.16.1, typer 0.27.3 (click 8.5.0), pytest 9.1.1, pytest-cov 7.1.0, ruff 0.17.2. Each phase adds only the dependencies it needs, with bounds.
 
 Models: development uses `qwen3.8:27b` (installed) on a 48 GB MacBook Pro (M5 Pro); production moves to a 128 GB Mac Studio. On 48 GB, keep one model loaded: every decision point uses the same model until the evaluation harness shows a smaller one is as consistent for routing.
 
@@ -114,10 +114,10 @@ The registry checks at start-up that names are unique, every tool action's MCP t
 
 The only code that talks to Ollama, and only on 127.0.0.1. `decide(point, inputs) -> validated output`:
 
-1. Renders the decision point's prompt template (a file under `conductor/prompts/`, with a version and a hash recorded).
-2. Calls Ollama with the schema as `format`, the fixed options, and `think` as set for the point.
-3. Logs the request, the raw reply, the reasoning, the model digest, and timings.
-4. Validates the reply; on failure raises `InvalidModelOutput`, which the graph turns into an escalation.
+1. Renders the decision point's prompt template (a file `conductor/prompts/<name>.v<N>.md`, its SHA-256 recorded): the system message is the template with code-made fields, then the output schema; the user message is the point's typed inputs as JSON (Phase 3a).
+2. Calls Ollama with the schema as `format` and fixed options: temperature 0, seed 7, `num_ctx` 8192, and the point's reply cap as `num_predict`. Thinking is on by default (the owner's decision, 2026-10-27, so the reasoning is logged); it is sent only when `/api/tags` lists the `thinking` capability for the model, since Ollama refuses `think` for a model without it, and the setting actually used is logged.
+3. Logs the request, the raw reply, the reasoning, the model digest (from `/api/tags`; chat replies carry none), and timings.
+4. Validates the reply: `done_reason` must be `stop` (a reply cut by the cap is truncated JSON), then the output contract's strict `from_json`. On failure it raises an invalid-output error, which the graph turns into an escalation. There is no retry inside `decide()`: when Ollama is down, times out, or answers with an HTTP error, it raises a model-unavailable error, the run escalates, and the person retries it once Ollama is back (the owner's decision, 2026-10-27).
 
 A `ScriptedModel` with the same interface returns recorded replies, for tests and for replaying a logged run.
 
