@@ -32,12 +32,23 @@ def fixed_times(monkeypatch: pytest.MonkeyPatch, *moments: str) -> None:
 
 
 class FakeOllama:
-    """What the fake answers to every GET: `status` and `body`. `paths` lists what was asked."""
+    """What the fake answers to every GET: `status` and `body`. `paths` lists what was asked.
+
+    To every POST it answers `chat_status` and `chat_body`, and records
+    `(path, headers with lower-case names, body)` in `posts`.
+    """
 
     def __init__(self) -> None:
         self.status = 200
         self.body = b'{"models": []}'
         self.paths: list[str] = []
+        self.chat_status = 200
+        self.chat_body = b"{}"
+        self.posts: list[tuple[str, dict[str, str], bytes]] = []
+
+    def answer(self, **fields: object) -> None:
+        """Answer chat posts with this JSON object."""
+        self.chat_body = json.dumps(fields).encode()
 
     def models(self, *names: str) -> None:
         listed = [{"name": name, "model": name, "size": 1} for name in names]
@@ -65,6 +76,17 @@ def fake_ollama() -> Iterator[tuple[FakeOllama, str]]:
             self.send_header("Content-Length", str(len(fake.body)))
             self.end_headers()
             self.wfile.write(fake.body)
+
+        def do_POST(self) -> None:
+            length = int(self.headers.get("Content-Length", "0"))
+            body = self.rfile.read(length)
+            headers = {name.lower(): value for name, value in self.headers.items()}
+            fake.posts.append((self.path, headers, body))
+            self.send_response(fake.chat_status)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(fake.chat_body)))
+            self.end_headers()
+            self.wfile.write(fake.chat_body)
 
         def log_message(self, format: str, *args: object) -> None:
             pass

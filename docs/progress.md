@@ -46,3 +46,12 @@ The coding agent appends one entry per phase, in the form `docs/phase-convention
   - None
 - Follow-ups:
   - None
+
+## Phase 3b: the Ollama client and the scripted model (2026-11-08)
+- Tests: 242 -> 282 (given 32)
+- New public names: `llm.model`: `UnavailableCode`, `ModelUnavailable`, `ModelInfo`, `ModelReply`, `Model`; `llm.ollama`: `OllamaModel`; `llm.scripted`: `SCRIPTED_INFO`, `ScriptError`, `ScriptedReply`, `ScriptedModel`; `config`: `TIMEOUT_MESSAGE`, `Settings.model_timeout`, `Settings.model_timeout_seconds`
+- Changed files: 10
+- Deviations:
+  - None
+- Follow-ups:
+  - None
