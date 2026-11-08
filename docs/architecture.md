@@ -130,10 +130,11 @@ Everything lives under the data folder (`CONDUCTOR_DATA_DIR`, default `./data`, 
 | Path | What |
 |---|---|
 | `runs/<run_id>.jsonl` | The event log of one run, append-only, one JSON object per line, files `0600` |
-| `conductor.db` | SQLite: LangGraph checkpoints (threads), approvals, escalations, thread leases |
+| `conductor.db` | SQLite (`0600`, schema version 1): approvals, escalations, thread leases (Phase 4b) |
+| `checkpoints.db` | SQLite: LangGraph's checkpoints (threads), kept apart so neither schema can break the other (the owner's decision, 2026-11-08; Phase 5) |
 | `evals/<timestamp>/` | Evaluation results |
 
-A **thread** is a conversation that can last days (a LangGraph thread id). A **run** is one pass through the graph for one request in a thread, with its own event log. Only one process resumes a thread at a time (a lease row in `conductor.db`).
+A **thread** is a conversation that can last days (a LangGraph thread id). A **run** is one pass through the graph for one request in a thread, with its own event log. Only one process resumes a thread at a time (a lease row in `conductor.db`, which expires 600 seconds after it was taken or renewed, so a crashed process never blocks a thread for long; decided 2026-11-08).
 
 Long-term memory (preferences, contacts, summaries of past threads, optionally recalled through embeddings from a local Ollama model) is a late phase. It adds variance rather than removing it, so it stays off the routing and planning path and is passed in only as labelled context.
 
@@ -153,7 +154,7 @@ The `code` domain automates the workflow already used by hand in the `finances` 
 
 ## Approvals and escalations
 
-Both appear in the terminal (`conductor approvals ...`) and on the approvals page (127.0.0.1, Phase 7), which share the store in `conductor.db`. Deciding records who decided, where, and when, then resumes the thread under its lease.
+Both appear in the terminal (`conductor approvals ...`) and on the approvals page (127.0.0.1, Phase 7), which share the store in `conductor.db`. Deciding records who decided, where, and when, then resumes the thread under its lease. The first decision recorded wins; a second is refused. An escalation is answered with `retry` or `cancel` and an optional note (decided 2026-11-08).
 
 ## Evaluation harness
 
