@@ -64,3 +64,12 @@ The coding agent appends one entry per phase, in the form `docs/phase-convention
   - None
 - Follow-ups:
   - None
+
+## Phase 4a: approval contracts and the policy (2026-11-08)
+- Tests: 308 -> 349 (given 34)
+- New public names: `contracts.approvals`: `STEP_COUNT_MESSAGE`, `NUMBERS_MESSAGE`, `DIGEST_MESSAGE`, `EDIT_MESSAGE`, `UTC_MESSAGE`, `ApprovalStage`, `Verdict`, `Channel`, `StepEffect`, `Sha256`, `UtcTime`, `PlannedStep`, `steps_digest`, `ApprovalRequest`, `ApprovalDecision`; `policy`: `ATTEMPT_MESSAGE`, `RefusalCode`, `DecisionRefused`, `Approved`, `Rejected`, `needs_approval`, `plan_request`, `step_request`, `apply_decision`
+- Changed files: 8
+- Deviations:
+  - None
+- Follow-ups:
+  - None
