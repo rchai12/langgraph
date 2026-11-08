@@ -1,6 +1,9 @@
+from typing import Literal
+
 from pydantic import Field
 
 from conductor.contracts.base import Contract, Id, Name
+from conductor.llm.points import DecisionPoint
 from conductor.registry import Action, Domain
 
 
@@ -64,3 +67,26 @@ DOMAIN = Domain(
         ),
     ),
 )
+
+
+class PickInputs(Contract):
+    request: str = Field(min_length=1, max_length=2000)
+
+
+class PickOutput(Contract):
+    action: Literal["echo", "note", "delegate", "none"]
+
+
+PICK = DecisionPoint(
+    name="demo_pick",
+    template="demo_pick.v1",
+    inputs=PickInputs,
+    output=PickOutput,
+    think=True,
+    max_reply_tokens=256,
+)
+
+
+def pick_fields() -> dict[str, str]:
+    lines = [f"- {action.name}: {action.description}" for action in DOMAIN.actions]
+    return {"actions": "\n".join(lines)}

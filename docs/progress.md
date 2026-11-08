@@ -37,3 +37,12 @@ The coding agent appends one entry per phase, in the form `docs/phase-convention
   - None
 - Follow-ups:
   - None
+
+## Phase 3a: decision points and prompts (2026-10-27)
+- Tests: 202 -> 242 (given 32)
+- New public names: `llm.prompts`: `PROMPTS_DIR`, `PromptError`, `PromptTemplate`, `load_template`; `llm.points`: `SEED`, `CONTEXT_TOKENS`, `MAX_REPLY_TOKENS`, `SCHEMA_INTRO`, `DecisionPoint`, `ModelRequest`, `build_request`; `domains.demo`: `PickInputs`, `PickOutput`, `PICK`, `pick_fields`
+- Changed files: 9
+- Deviations:
+  - None
+- Follow-ups:
+  - None

@@ -116,10 +116,10 @@ The only code that talks to Ollama, and only on 127.0.0.1. `decide(point, inputs
 
 1. Renders the decision point's prompt template (a file `conductor/prompts/<name>.v<N>.md`, its SHA-256 recorded): the system message is the template with code-made fields, then the output schema; the user message is the point's typed inputs as JSON (Phase 3a).
 2. Calls Ollama with the schema as `format` and fixed options: temperature 0, seed 7, `num_ctx` 8192, and the point's reply cap as `num_predict`. Thinking is on by default (the owner's decision, 2026-10-27, so the reasoning is logged); it is sent only when `/api/tags` lists the `thinking` capability for the model, since Ollama refuses `think` for a model without it, and the setting actually used is logged.
-3. Logs the request, the raw reply, the reasoning, the model digest (from `/api/tags`; chat replies carry none), and timings.
+3. Logs the request, the raw reply, the reasoning, the model digest (from `/api/tags`, read before every call so the digest logged is the one installed then; chat replies carry none), and timings. The wait for a reply is `CONDUCTOR_MODEL_TIMEOUT` (whole seconds, default 300); `keep_alive` is not sent, so Ollama's own default applies (decided 2026-11-08).
 4. Validates the reply: `done_reason` must be `stop` (a reply cut by the cap is truncated JSON), then the output contract's strict `from_json`. On failure it raises an invalid-output error, which the graph turns into an escalation. There is no retry inside `decide()`: when Ollama is down, times out, or answers with an HTTP error, it raises a model-unavailable error, the run escalates, and the person retries it once Ollama is back (the owner's decision, 2026-10-27).
 
-A `ScriptedModel` with the same interface returns recorded replies, for tests and for replaying a logged run.
+A `ScriptedModel` with the same interface returns recorded replies in order, each naming the decision point it answers (a reply for another point is an error), for tests and for replaying a logged run.
 
 Prompts are structured: a fixed system section (role, rules, the closed set of answers), the inputs in labelled blocks, and the output schema. Rendered prompts are pinned by tests so that a prompt change is always deliberate.
 
