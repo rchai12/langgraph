@@ -13,6 +13,7 @@ EscalationKind = Literal[
     "tool_error",
     "retries_exhausted",
     "rejected",
+    "model_unavailable",
 ]
 _SAFE_KEY = re.compile(r"^[A-Za-z_][A-Za-z0-9_]{0,63}$")
 

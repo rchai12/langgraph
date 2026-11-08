@@ -55,3 +55,12 @@ The coding agent appends one entry per phase, in the form `docs/phase-convention
   - None
 - Follow-ups:
   - None
+
+## Phase 3c: decide() (2026-11-08)
+- Tests: 282 -> 308 (given 19)
+- New public names: `llm.decide`: `INVALID_OUTPUT_MESSAGE`, `RETRY_HINT`, `InvalidModelOutput`, `Decision`, `decide`, `escalation_for`
+- Changed files: 8
+- Deviations:
+  - None
+- Follow-ups:
+  - None

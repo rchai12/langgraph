@@ -49,6 +49,7 @@ def test_the_closed_sets() -> None:
         "tool_error",
         "retries_exhausted",
         "rejected",
+        "model_unavailable",
     )
     assert (MAX_ATTEMPTS, MAX_PROBLEMS) == (3, 20)
 
