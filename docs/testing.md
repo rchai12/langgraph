@@ -33,6 +33,7 @@ A bug here lets the agent act without approval, lose its record, or accept outpu
 - `llm/decide.py` (every model call: validation and its record; Phase 3c)
 - `policy.py` (which steps wait for a person, and what a decision allows; Phase 4a)
 - `store.py` (approvals, escalations, and leases kept between processes; Phase 4b)
+- `decisions.py` (a decision is recorded only after the policy accepts it; Phase 4c)
 
 ## Commands
 

@@ -73,3 +73,21 @@ The coding agent appends one entry per phase, in the form `docs/phase-convention
   - None
 - Follow-ups:
   - None
+
+## Phase 4b: the store (2026-11-08)
+- Tests: 349 -> 378 (given 22)
+- New public names: `store`: `SCHEMA_VERSION`, `LEASE_SECONDS`, `BUSY_SECONDS`, `ID_MESSAGE`, `StoreError`, `NotFound`, `AlreadyDecided`, `LeaseHeld`, `LeaseLost`, `StoredApproval`, `StoredEscalation`, `Lease`, `Store`; `contracts.approvals`: `Answer`, `EscalationAnswer`; `config`: `Settings.db_path`
+- Changed files: 8
+- Deviations:
+  - None
+- Follow-ups:
+  - None
+
+## Phase 4c: the approvals and escalations commands (2026-11-08)
+- Tests: 378 -> 423 (given 33)
+- New public names: `decisions`: `NOTE_MESSAGE`, `decide_approval`, `answer_escalation`; `config`: `DECIDED_BY_MESSAGE`, `Settings.decided_by`
+- Changed files: 11
+- Deviations:
+  - The Phase 4b progress entry was missing, so this phase adds it; `check_reports.py` rejects the committed 4b review without one.
+- Follow-ups:
+  - None

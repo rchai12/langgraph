@@ -1,11 +1,25 @@
 import json
-from typing import Annotated, NoReturn
+from collections.abc import Callable
+from datetime import datetime
+from typing import Annotated, Any, NoReturn
 
 import typer
 
+from conductor import domains
 from conductor.config import Settings, SettingsError, get_settings
+from conductor.decisions import answer_escalation, decide_approval
 from conductor.diagnostics import run_checks, summary_line
 from conductor.events import EventLog, EventLogCorrupt, RunNotFound
+from conductor.policy import DecisionRefused
+from conductor.registry import NotRegistered, Registry
+from conductor.store import (
+    AlreadyDecided,
+    NotFound,
+    Store,
+    StoredApproval,
+    StoredEscalation,
+    StoreError,
+)
 
 app = typer.Typer(no_args_is_help=True, add_completion=False)
 runs_app = typer.Typer(no_args_is_help=True, add_completion=False)
@@ -69,3 +83,300 @@ def show(run_id: str, payload: Annotated[bool, typer.Option("--payload")] = Fals
             rendered = json.dumps(event.payload, ensure_ascii=False, sort_keys=True, indent=2)
             for part in rendered.split("\n"):
                 typer.echo(f"      {part}")
+
+
+approvals_app = typer.Typer(no_args_is_help=True, add_completion=False)
+escalations_app = typer.Typer(no_args_is_help=True, add_completion=False)
+app.add_typer(approvals_app, name="approvals")
+app.add_typer(escalations_app, name="escalations")
+
+_WHEN = "%Y-%m-%dT%H:%M:%SZ"
+_CAUGHT = (StoreError, NotFound, AlreadyDecided, NotRegistered, ValueError, DecisionRefused)
+
+
+def _report(error: BaseException) -> NoReturn:
+    typer.echo(f"Error: {error}", err=True)
+    if isinstance(error, DecisionRefused):
+        for problem in error.problems:
+            typer.echo(f"  {problem.loc}: {problem.code}", err=True)
+    raise typer.Exit(1)
+
+
+def _run(work: Callable[[Settings, Store], None]) -> None:
+    settings = _settings()
+    try:
+        work(settings, Store(settings.db_path))
+    except _CAUGHT as error:
+        _report(error)
+
+
+def _when(moment: datetime) -> str:
+    return moment.strftime(_WHEN)
+
+
+def _args(value: object) -> str:
+    return json.dumps(value, ensure_ascii=False, sort_keys=True)
+
+
+def _dump(value: object) -> None:
+    typer.echo(json.dumps(value, ensure_ascii=False, indent=2))
+
+
+def _json_object(text: str) -> dict[str, Any]:
+    def reject(_constant: str) -> None:
+        raise ValueError
+
+    try:
+        parsed = json.loads(text, parse_constant=reject)
+    except (json.JSONDecodeError, ValueError):
+        _bail("--args must be a JSON object")
+    if not isinstance(parsed, dict):
+        _bail("--args must be a JSON object")
+    return parsed
+
+
+def _allow(yes: bool, prompt: str, preview: str) -> bool:
+    if yes:
+        return True
+    typer.echo(preview)
+    return typer.confirm(prompt, default=False)
+
+
+def _request_block(stored: StoredApproval) -> str:
+    request = stored.request
+    decision = stored.decision
+    if decision is None:
+        status = "pending"
+    else:
+        word = {"approve": "approved", "reject": "rejected", "edit": "edited"}[decision.verdict]
+        when = _when(decision.decided_at)
+        status = f"{word} by {decision.decided_by} ({decision.channel}) at {when}"
+    lines = [
+        f"approval {request.approval_id}  {request.stage}  {status}",
+        f"run {request.run_id}  requested {_when(request.requested_at)}",
+    ]
+    for step in request.steps:
+        lines.append(f"  {step.number}. {step.action}  {step.effect}  {_args(step.args)}")
+    if decision is not None and decision.verdict == "edit":
+        lines.append(f"edited args: {_args(decision.edited_args)}")
+    if decision is not None and decision.note:
+        lines.append(f"note: {decision.note}")
+    return "\n".join(lines)
+
+
+def _approval_json(stored: StoredApproval) -> dict[str, object]:
+    decision = stored.decision
+    dumped = None if decision is None else decision.model_dump(mode="json")
+    return {"request": stored.request.model_dump(mode="json"), "decision": dumped}
+
+
+def _escalation_block(stored: StoredEscalation) -> str:
+    escalation = stored.escalation
+    answer = stored.answer
+    if answer is None:
+        status = "open"
+    else:
+        when = _when(answer.answered_at)
+        status = f"{answer.answer} by {answer.decided_by} ({answer.channel}) at {when}"
+    lines = [
+        f"escalation {stored.escalation_id}  {escalation.kind}  {status}",
+        f"run {escalation.run_id}  raised {_when(stored.raised_at)}",
+        escalation.detail,
+    ]
+    for problem in escalation.problems:
+        lines.append(f"  {problem.loc}: {problem.code}")
+    if answer is not None and answer.note:
+        lines.append(f"note: {answer.note}")
+    return "\n".join(lines)
+
+
+def _escalation_json(stored: StoredEscalation) -> dict[str, object]:
+    answer = stored.answer
+    dumped = None if answer is None else answer.model_dump(mode="json")
+    return {
+        "escalation_id": stored.escalation_id,
+        "raised_at": _when(stored.raised_at),
+        "escalation": stored.escalation.model_dump(mode="json"),
+        "answer": dumped,
+    }
+
+
+def _stopped(yes: bool, prompt: str, preview: str) -> bool:
+    if _allow(yes, prompt, preview):
+        return False
+    typer.echo("Nothing recorded.")
+    return True
+
+
+@approvals_app.command("list")
+def list_approvals(json_output: Annotated[bool, typer.Option("--json")] = False) -> None:
+    def work(settings: Settings, store: Store) -> None:
+        pending = store.pending()
+        if json_output:
+            _dump([request.model_dump(mode="json") for request in pending])
+            return
+        if not pending:
+            typer.echo("No pending approvals.")
+            return
+        for request in pending:
+            actions = ", ".join(step.action for step in request.steps)
+            when = _when(request.requested_at)
+            typer.echo(f"{request.approval_id}  {when}  {request.stage}  {actions}")
+
+    _run(work)
+
+
+@approvals_app.command("show")
+def show_approval(
+    approval_id: str, json_output: Annotated[bool, typer.Option("--json")] = False
+) -> None:
+    def work(settings: Settings, store: Store) -> None:
+        stored = store.approval(approval_id)
+        if json_output:
+            _dump(_approval_json(stored))
+            return
+        typer.echo(_request_block(stored))
+
+    _run(work)
+
+
+@approvals_app.command("approve")
+def approve(
+    approval_id: str,
+    note: Annotated[str, typer.Option("--note")] = "",
+    yes: Annotated[bool, typer.Option("--yes")] = False,
+) -> None:
+    def work(settings: Settings, store: Store) -> None:
+        stored = store.approval(approval_id)
+        if _stopped(yes, "Approve?", _request_block(stored)):
+            return
+        decide_approval(
+            store,
+            Registry(domains.DOMAINS),
+            approval_id,
+            "approve",
+            channel="terminal",
+            decided_by=settings.decided_by,
+            note=note,
+        )
+        typer.echo(f"Approved {approval_id}.")
+
+    _run(work)
+
+
+@approvals_app.command("reject")
+def reject(approval_id: str, note: Annotated[str, typer.Option("--note")] = "") -> None:
+    def work(settings: Settings, store: Store) -> None:
+        decide_approval(
+            store,
+            Registry(domains.DOMAINS),
+            approval_id,
+            "reject",
+            channel="terminal",
+            decided_by=settings.decided_by,
+            note=note,
+        )
+        typer.echo(f"Rejected {approval_id}.")
+
+    _run(work)
+
+
+@approvals_app.command("edit")
+def edit(
+    approval_id: str,
+    args_text: Annotated[str, typer.Option("--args")],
+    note: Annotated[str, typer.Option("--note")] = "",
+    yes: Annotated[bool, typer.Option("--yes")] = False,
+) -> None:
+    edited = _json_object(args_text)
+
+    def work(settings: Settings, store: Store) -> None:
+        stored = store.approval(approval_id)
+        preview = f"{_request_block(stored)}\nedited args: {_args(edited)}"
+        if _stopped(yes, "Approve with these arguments?", preview):
+            return
+        decide_approval(
+            store,
+            Registry(domains.DOMAINS),
+            approval_id,
+            "edit",
+            channel="terminal",
+            decided_by=settings.decided_by,
+            note=note,
+            edited_args=edited,
+        )
+        typer.echo(f"Approved {approval_id} with edited arguments.")
+
+    _run(work)
+
+
+@escalations_app.command("list")
+def list_escalations(json_output: Annotated[bool, typer.Option("--json")] = False) -> None:
+    def work(settings: Settings, store: Store) -> None:
+        opened = store.open_escalations()
+        if json_output:
+            _dump([_escalation_json(stored) for stored in opened])
+            return
+        if not opened:
+            typer.echo("No open escalations.")
+            return
+        for stored in opened:
+            typer.echo(
+                f"{stored.escalation_id}  {_when(stored.raised_at)}  {stored.escalation.kind}"
+                f"  run {stored.escalation.run_id}"
+            )
+
+    _run(work)
+
+
+@escalations_app.command("show")
+def show_escalation(
+    escalation_id: str, json_output: Annotated[bool, typer.Option("--json")] = False
+) -> None:
+    def work(settings: Settings, store: Store) -> None:
+        stored = store.escalation(escalation_id)
+        if json_output:
+            _dump(_escalation_json(stored))
+            return
+        typer.echo(_escalation_block(stored))
+
+    _run(work)
+
+
+@escalations_app.command("retry")
+def retry(
+    escalation_id: str,
+    note: Annotated[str, typer.Option("--note")] = "",
+    yes: Annotated[bool, typer.Option("--yes")] = False,
+) -> None:
+    def work(settings: Settings, store: Store) -> None:
+        stored = store.escalation(escalation_id)
+        if _stopped(yes, "Retry?", _escalation_block(stored)):
+            return
+        answer_escalation(
+            store,
+            escalation_id,
+            "retry",
+            channel="terminal",
+            decided_by=settings.decided_by,
+            note=note,
+        )
+        typer.echo(f"Retry recorded for {escalation_id}.")
+
+    _run(work)
+
+
+@escalations_app.command("cancel")
+def cancel(escalation_id: str, note: Annotated[str, typer.Option("--note")] = "") -> None:
+    def work(settings: Settings, store: Store) -> None:
+        answer_escalation(
+            store,
+            escalation_id,
+            "cancel",
+            channel="terminal",
+            decided_by=settings.decided_by,
+            note=note,
+        )
+        typer.echo(f"Cancelled {escalation_id}.")
+
+    _run(work)
