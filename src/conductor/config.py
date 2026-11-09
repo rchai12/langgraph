@@ -9,6 +9,7 @@ OLLAMA_HOST_MESSAGE = "must be an http address on this machine (127.0.0.1, local
 MODEL_MESSAGE = "must not be empty"
 TIMEOUT_MESSAGE = "must be whole seconds from 1 to 3600"
 DECIDED_BY_MESSAGE = "must be a lowercase name of up to 32 characters"
+DEMO_MESSAGE = "must be true or false"
 
 
 class SettingsError(Exception):
@@ -23,6 +24,7 @@ class Settings(BaseSettings):
     model: str = "qwen3.8:27b"
     model_timeout: str = "300"
     decided_by: str = "owner"
+    demo: str = "false"
 
     @property
     def runs_dir(self) -> Path:
@@ -31,6 +33,14 @@ class Settings(BaseSettings):
     @property
     def db_path(self) -> Path:
         return self.data_dir / "conductor.db"
+
+    @property
+    def checkpoints_path(self) -> Path:
+        return self.data_dir / "checkpoints.db"
+
+    @property
+    def demo_on(self) -> bool:
+        return self.demo == "true"
 
     @property
     def model_timeout_seconds(self) -> int:
@@ -53,6 +63,8 @@ def get_settings() -> Settings:
         problems.append(f"CONDUCTOR_MODEL_TIMEOUT: {TIMEOUT_MESSAGE}")
     if re.fullmatch(r"^[a-z][a-z0-9_]{0,31}$", settings.decided_by) is None:
         problems.append(f"CONDUCTOR_DECIDED_BY: {DECIDED_BY_MESSAGE}")
+    if settings.demo not in ("true", "false"):
+        problems.append(f"CONDUCTOR_DEMO: {DEMO_MESSAGE}")
     if problems:
         raise SettingsError("; ".join(problems))
     return settings

@@ -34,7 +34,7 @@ NODES = (
     "finish",
 )
 RECURSION_LIMIT = 100
-RunStatus = Literal["waiting", "done", "rejected", "cancelled"]
+RunStatus = Literal["waiting", "done", "rejected", "cancelled", "stopped"]
 STEP_FAILED_DETAIL = "the step failed"
 RESULT_DETAIL = "the result does not fit the action"
 
@@ -69,6 +69,7 @@ class RunState:
     escalation_id: str | None = None
     reply: str | None = None
     note: str = ""
+    stopped_at: str | None = None
 
 
 class State(TypedDict, total=False):
@@ -122,6 +123,8 @@ def start_run(graph: CompiledStateGraph, request: str, *, run_id: str) -> RunSta
 
 def resume_run(graph: CompiledStateGraph, store: Store, run_id: str) -> RunState:
     state = run_state(graph, run_id)
+    if state.status == "stopped":
+        raise RunError(f"run {run_id} stopped at {state.stopped_at} and cannot be resumed")
     if state.status != "waiting":
         raise RunError(f"run {run_id} is not waiting")
     if state.approval_id is not None:
@@ -146,6 +149,8 @@ def run_state(graph: CompiledStateGraph, run_id: str) -> RunState:
         if "approval_id" in value:
             return RunState(run_id=run_id, status="waiting", approval_id=value["approval_id"])
         return RunState(run_id=run_id, status="waiting", escalation_id=value["escalation_id"])
+    if snapshot.next:
+        return RunState(run_id=run_id, status="stopped", stopped_at=snapshot.next[0])
     values = snapshot.values
     return RunState(
         run_id=run_id,

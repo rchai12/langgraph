@@ -118,3 +118,12 @@ The coding agent appends one entry per phase, in the form `docs/phase-convention
   - None
 - Follow-ups:
   - None
+
+## Phase 5d: the runtime (2026-11-09)
+- Tests: 523 -> 542 (given 12)
+- New public names: `config`: `DEMO_MESSAGE`, `Settings.demo`, `Settings.demo_on`, `Settings.checkpoints_path`; `graph.supervisor`: `RunState.stopped_at`; `runtime`: `DEMO_SUMMARY`, `DemoRunner`, `NoRunner`, `Runtime`, `open_runtime`, `ask`, `resume`, `state`
+- Changed files: 9
+- Deviations:
+  - None
+- Follow-ups:
+  - None

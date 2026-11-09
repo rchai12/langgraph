@@ -39,6 +39,7 @@ A bug here lets the agent act without approval, lose its record, or accept outpu
 - `planning/plan.py` (the planner's schema from the registry, and every way planning escalates; Phase 5b)
 - `planning/answer.py` (the reply from the results, and every way it escalates; Phase 5b)
 - `graph/supervisor.py` (no step with a side effect runs without its own approval; Phase 5c)
+- `runtime.py` (one process per thread at a time, and private checkpoint files; Phase 5d)
 
 ## Commands
 
