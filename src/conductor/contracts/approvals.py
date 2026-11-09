@@ -84,3 +84,15 @@ class ApprovalDecision(Contract):
         if (self.verdict == "edit") != (self.edited_args is not None):
             raise ValueError(EDIT_MESSAGE)
         return self
+
+
+Answer = Literal["retry", "cancel"]
+
+
+class EscalationAnswer(Contract):
+    escalation_id: Id
+    answer: Answer
+    note: str = Field(default="", max_length=500)
+    channel: Channel
+    decided_by: Name
+    answered_at: UtcTime

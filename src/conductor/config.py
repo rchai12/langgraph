@@ -27,6 +27,10 @@ class Settings(BaseSettings):
         return self.data_dir / "runs"
 
     @property
+    def db_path(self) -> Path:
+        return self.data_dir / "conductor.db"
+
+    @property
     def model_timeout_seconds(self) -> int:
         return int(self.model_timeout)
 

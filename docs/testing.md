@@ -32,6 +32,7 @@ A bug here lets the agent act without approval, lose its record, or accept outpu
 - `plancheck.py` (plans checked against the registry; Phase 2c)
 - `llm/decide.py` (every model call: validation and its record; Phase 3c)
 - `policy.py` (which steps wait for a person, and what a decision allows; Phase 4a)
+- `store.py` (approvals, escalations, and leases kept between processes; Phase 4b)
 
 ## Commands
 
