@@ -38,6 +38,7 @@ A bug here lets the agent act without approval, lose its record, or accept outpu
 - `routing/route.py` (the classifier, and every way routing escalates; Phase 5a)
 - `planning/plan.py` (the planner's schema from the registry, and every way planning escalates; Phase 5b)
 - `planning/answer.py` (the reply from the results, and every way it escalates; Phase 5b)
+- `graph/supervisor.py` (no step with a side effect runs without its own approval; Phase 5c)
 
 ## Commands
 

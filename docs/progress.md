@@ -109,3 +109,12 @@ The coding agent appends one entry per phase, in the form `docs/phase-convention
   - None
 - Follow-ups:
   - None
+
+## Phase 5c: the supervisor graph (2026-11-09)
+- Tests: 500 -> 523 (given 14)
+- New public names: `graph`: `TRACING_VARIABLES`, `tracing_off`; `graph.supervisor`: `NODES`, `RECURSION_LIMIT`, `RunStatus`, `STEP_FAILED_DETAIL`, `RESULT_DETAIL`, `StepFailed`, `StepRunner`, `RunError`, `Services`, `RunState`, `State`, `build_graph`, `start_run`, `resume_run`, `run_state`
+- Changed files: 7
+- Deviations:
+  - None
+- Follow-ups:
+  - None
