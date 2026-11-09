@@ -154,7 +154,7 @@ The `code` domain automates the workflow already used by hand in the `finances` 
 
 ## Approvals and escalations
 
-Both appear in the terminal (`conductor approvals ...`) and on the approvals page (127.0.0.1, Phase 7), which share the store in `conductor.db`. Deciding records who decided, where, and when, then resumes the thread under its lease. The first decision recorded wins; a second is refused. An escalation is answered with `retry` or `cancel` and an optional note (decided 2026-11-08).
+Both appear in the terminal (`conductor approvals ...`) and on the approvals page (127.0.0.1, Phase 7), which share the store in `conductor.db`. Deciding records who decided, where, and when, then resumes the thread under its lease. The first decision recorded wins; a second is refused. An escalation is answered with `retry` or `cancel` and an optional note (decided 2026-11-08). Both channels go through `conductor.decisions` (Phase 4c), which records a decision only after `policy.apply_decision` accepts it. In the terminal, `approve`, `edit`, and `retry` show what they allow and ask unless `--yes`; `reject` and `cancel` never ask; edits come as `--args` JSON; `list` and `show` take `--json`; the label recorded as who decided is `CONDUCTOR_DECIDED_BY` (default `owner`).
 
 ## Evaluation harness
 
