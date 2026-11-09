@@ -144,7 +144,7 @@ Found on 2026-11-09 with langgraph 1.2.20, langgraph-checkpoint 4.3.1, langchain
 - Resuming a finished thread does nothing and returns its final state.
 - An exception in a node passes out of `invoke` unchanged.
 - **Pydantic objects in the state** give `Deserializing unregistered type ... This will be blocked in a future version`; JSON-only state gives no warning.
-- `recursion_limit` counts the steps of one `invoke` (it starts again at each resume). A plan of eight `read` steps takes 21; the default of 25 is too tight, hence `RECURSION_LIMIT`.
+- `recursion_limit` counts the steps of one `invoke` (it starts again at each resume). A plan of eight `read` steps takes 21. (Corrected after the phase: the default is 10007, read from the environment variable `LANGGRAPH_DEFAULT_RECURSION_LIMIT`; the spike had set 25 itself. `RECURSION_LIMIT` stays as a fixed bound that the environment cannot change.)
 - **With `LANGSMITH_TRACING=true` and a key in the environment, a run sends its whole state to LangSmith** (a 34 KB multipart POST was attempted). Setting the tracing variables to `false`, before or after import, or running inside `langsmith.tracing_context(enabled=False)`, stops it; inside that context `langsmith.utils.tracing_is_enabled()` is `False` even when the environment says `true`. With no tracing variables, a run opens no connection.
 
 ## Requirements
