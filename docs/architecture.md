@@ -54,8 +54,8 @@ Any node can **escalate**: the run records why, interrupts, and waits for the pe
 
 ### Route
 
-1. **Rules first** (pure code, `routing/rules.py`): an explicit prefix (`finance: ...`, `code: ...`), then keyword and pattern rules each domain registers. The first rule that matches decides, and its id is recorded.
-2. **Classifier second**, only when no rule matches: a decision point whose schema is `{"domain": <enum of registered domains> | "unknown"}`. `unknown` escalates.
+1. **Rules first** (pure code, `routing/rules.py`, critical): an explicit prefix (`finance: ...`, `code: ...`; the name of a registered domain, any case, then a colon), which is stripped before planning and always wins; then whole-word keyword phrases each domain declares as `Rule`s (no regular expressions; decided 2026-11-09). Rules of one domain that match route by its first matching rule, whose id (`<domain>.<rule>`, or `<domain>.prefix`) is recorded; rules of two domains that match escalate, as a request that needs two domains does.
+2. **Classifier second**, only when no rule matches (`routing/route.py`, critical; Phase 5a): the decision point `route`, whose schema is `{"domain": <enum of registered domains> | "unknown"}`, built from the registry, with a reply cap of 2048 tokens because thinking counts toward `num_predict`. `unknown` escalates, as do invalid output and an unavailable model; with no domain registered it escalates without asking. A domain may not be named `unknown`.
 
 ### Plan
 
