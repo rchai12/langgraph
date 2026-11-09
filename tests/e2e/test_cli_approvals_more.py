@@ -40,7 +40,9 @@ def test_show_json_includes_an_answer(db: Store) -> None:
     raised = db.add_escalation(
         Escalation(kind="model_unavailable", detail="model unavailable: timeout", run_id=RUN)
     )
-    answered = run("escalations", "retry", raised.escalation_id, "--note", "back up", "--yes")
+    answered = run(
+        "escalations", "retry", "--no-resume", raised.escalation_id, "--note", "back up", "--yes"
+    )
     assert answered.exit_code == 0
     shown = json.loads(run("escalations", "show", raised.escalation_id, "--json").stdout)
     stored = db.escalation(raised.escalation_id).answer
@@ -52,7 +54,9 @@ def test_a_declined_retry_records_nothing(db: Store) -> None:
     raised = db.add_escalation(
         Escalation(kind="model_unavailable", detail="model unavailable: timeout", run_id=RUN)
     )
-    result = runner.invoke(app, ["escalations", "retry", raised.escalation_id], input="n\n")
+    result = runner.invoke(
+        app, ["escalations", "retry", "--no-resume", raised.escalation_id], input="n\n"
+    )
     assert result.exit_code == 0
     assert result.stdout.endswith("Retry? [y/N]: n\nNothing recorded.\n")
     assert [item.escalation_id for item in db.open_escalations()] == [raised.escalation_id]
@@ -60,7 +64,7 @@ def test_a_declined_retry_records_nothing(db: Store) -> None:
 
 def test_a_declined_edit_records_nothing(db: Store) -> None:
     result = runner.invoke(
-        app, ["approvals", "edit", FIRST, "--args", '{"title": "Eggs"}'], input="n\n"
+        app, ["approvals", "edit", "--no-resume", FIRST, "--args", '{"title": "Eggs"}'], input="n\n"
     )
     assert result.exit_code == 0
     assert result.stdout.endswith(
@@ -72,10 +76,12 @@ def test_a_declined_edit_records_nothing(db: Store) -> None:
 
 
 def test_infinity_is_refused_and_an_empty_object_is_judged(db: Store) -> None:
-    refused = run("approvals", "edit", FIRST, "--args", '{"title": Infinity}', "--yes")
+    refused = run(
+        "approvals", "edit", "--no-resume", FIRST, "--args", '{"title": Infinity}', "--yes"
+    )
     assert (refused.exit_code, refused.stderr) == (1, "Error: --args must be a JSON object\n")
     assert db.approval(FIRST).decision is None
-    judged = run("approvals", "edit", FIRST, "--args", "{}", "--yes")
+    judged = run("approvals", "edit", "--no-resume", FIRST, "--args", "{}", "--yes")
     assert judged.exit_code == 1
     assert judged.stderr.startswith("Error: decision refused:")
     assert "--args must be a JSON object" not in judged.stderr
@@ -86,7 +92,7 @@ def test_a_bad_decided_by_prints_the_settings_error(
     db: Store, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("CONDUCTOR_DECIDED_BY", "Owner")
-    result = run("approvals", "approve", FIRST, "--yes")
+    result = run("approvals", "approve", "--no-resume", FIRST, "--yes")
     assert result.exit_code == 1
     assert result.stderr == (
         "Error: CONDUCTOR_DECIDED_BY: must be a lowercase name of up to 32 characters\n"
@@ -95,7 +101,7 @@ def test_a_bad_decided_by_prints_the_settings_error(
 
 
 def test_an_approval_without_a_note_shows_who_approved(db: Store) -> None:
-    assert run("approvals", "approve", FIRST, "--yes").exit_code == 0
+    assert run("approvals", "approve", "--no-resume", FIRST, "--yes").exit_code == 0
     assert run("approvals", "show", FIRST).stdout == (
         f"approval {FIRST}  step  approved by owner (terminal) at 2026-11-08T10:00:00Z\n"
         f"run {RUN}  requested 2026-11-08T09:00:00Z\n"
@@ -111,7 +117,7 @@ def test_a_cancellation_without_a_note_shows_who_cancelled(db: Store) -> None:
     raised = db.add_escalation(
         Escalation(kind="model_unavailable", detail="model unavailable: timeout", run_id=RUN)
     )
-    assert run("escalations", "cancel", raised.escalation_id).exit_code == 0
+    assert run("escalations", "cancel", "--no-resume", raised.escalation_id).exit_code == 0
     assert run("escalations", "show", raised.escalation_id).stdout == (
         f"escalation {raised.escalation_id}  model_unavailable  "
         "cancel by owner (terminal) at 2026-11-08T10:00:00Z\n"

@@ -4,6 +4,8 @@ Spec: `docs/phases/phase-05e-run-commands.md`. Follow `docs/phase-conventions.md
 
 The coder added `RESUMABLE_STOPS` to `conductor.graph.supervisor`, added `ask` and `resume` to `conductor.cli.main` and resuming to its five decision commands, replaced the three 4c test files with the given versions (`--no-resume` only), copied `tests/e2e/test_cli_ask.py` and `tests/integration/test_resume_stopped.py` (16 tests), and wrote `tests/e2e/test_cli_ask_more.py`.
 
+This is the second verification. The first failed on mistakes in the spec's given tests (see the spec's "Corrections"); verify the whole phase again, and write a new report over the old one.
+
 ## 1. Gates
 
 N is `542`. Sections: cli, core.
@@ -15,7 +17,8 @@ N is `542`. Sections: cli, core.
 | `.venv/bin/python -m pytest tests/e2e/test_cli_ask.py tests/integration/test_resume_stopped.py --no-cov` | exactly `16 passed` |
 | each of `tests/e2e/test_cli_approvals.py`, `tests/e2e/test_cli_escalations.py`, `tests/e2e/test_cli_approvals_more.py` against the spec's block (save the block, then `diff`) | no output; and `git diff HEAD` of them shows `--no-resume` added to decision commands and nothing else besides line wrapping |
 | `.venv/bin/python scripts/check_reports.py --phase 5e` (before writing your report) | `Reports OK.` |
-| `git diff --stat HEAD -- src/conductor/runtime.py src/conductor/decisions.py src/conductor/store.py src/conductor/policy.py src/conductor/routing src/conductor/planning src/conductor/contracts tests/unit tests/integration/test_supervisor.py tests/integration/test_runtime.py tests/support.py` | no output |
+| `git diff --stat HEAD -- src/conductor/runtime.py src/conductor/decisions.py src/conductor/store.py src/conductor/policy.py src/conductor/routing src/conductor/planning src/conductor/contracts tests/unit tests/integration/test_supervisor.py tests/support.py` | no output |
+| `git diff HEAD -- tests/integration/test_runtime.py tests/integration/test_runtime_more.py` | only the two given edits of the spec's Scope |
 | `git diff HEAD -- src/conductor/graph/supervisor.py` | only `RESUMABLE_STOPS` and the stopped branch of `resume_run` |
 
 Searches, each with no output:

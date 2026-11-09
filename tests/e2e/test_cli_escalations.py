@@ -64,7 +64,9 @@ def test_show_an_escalation(db: Store) -> None:
 
 
 def test_retry_asks_first(db: Store) -> None:
-    result = runner.invoke(app, ["escalations", "retry", SECOND, "--note", "back up"], input="y\n")
+    result = runner.invoke(
+        app, ["escalations", "retry", "--no-resume", SECOND, "--note", "back up"], input="y\n"
+    )
     assert result.exit_code == 0
     assert result.stdout.endswith("Retry? [y/N]: y\n" + f"Retry recorded for {SECOND}.\n")
     assert run("escalations", "show", SECOND).stdout == (
@@ -78,9 +80,9 @@ def test_retry_asks_first(db: Store) -> None:
 
 
 def test_cancel_does_not_ask(db: Store) -> None:
-    result = run("escalations", "cancel", FIRST)
+    result = run("escalations", "cancel", "--no-resume", FIRST)
     assert (result.exit_code, result.stdout) == (0, f"Cancelled {FIRST}.\n")
-    again = run("escalations", "retry", FIRST, "--yes")
+    again = run("escalations", "retry", "--no-resume", FIRST, "--yes")
     assert (again.exit_code, again.stderr) == (
         1,
         f"Error: escalation {FIRST} is already answered\n",

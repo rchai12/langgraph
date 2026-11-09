@@ -1,3 +1,4 @@
+import dataclasses
 import json
 from collections.abc import Callable
 from datetime import datetime
@@ -5,13 +6,14 @@ from typing import Annotated, Any, NoReturn
 
 import typer
 
-from conductor import domains
+from conductor import runtime
 from conductor.config import Settings, SettingsError, get_settings
 from conductor.decisions import answer_escalation, decide_approval
 from conductor.diagnostics import run_checks, summary_line
 from conductor.events import EventLog, EventLogCorrupt, RunNotFound
+from conductor.graph.supervisor import RunError, RunState
 from conductor.policy import DecisionRefused
-from conductor.registry import NotRegistered, Registry
+from conductor.registry import NotRegistered
 from conductor.store import (
     AlreadyDecided,
     NotFound,
@@ -110,6 +112,15 @@ def _run(work: Callable[[Settings, Store], None]) -> None:
         _report(error)
 
 
+def _session(work: Callable[[Settings, runtime.Runtime], None]) -> None:
+    settings = _settings()
+    try:
+        with runtime.open_runtime(settings) as opened:
+            work(settings, opened)
+    except (*_CAUGHT, RunError) as error:
+        _report(error)
+
+
 def _when(moment: datetime) -> str:
     return moment.strftime(_WHEN)
 
@@ -201,6 +212,42 @@ def _escalation_json(stored: StoredEscalation) -> dict[str, object]:
     }
 
 
+def _state_text(opened: runtime.Runtime, found: RunState) -> str:
+    if found.status == "waiting" and found.approval_id is not None:
+        block = _request_block(opened.store.approval(found.approval_id))
+        return (
+            f"{block}\nNext: conductor approvals approve {found.approval_id}"
+            " (or reject, or edit --args)"
+        )
+    if found.status == "waiting" and found.escalation_id is not None:
+        block = _escalation_block(opened.store.escalation(found.escalation_id))
+        return f"{block}\nNext: conductor escalations retry {found.escalation_id} (or cancel)"
+    if found.status == "done":
+        return f"run {found.run_id}  done\n{found.reply}"
+    if found.status == "rejected":
+        line = f"run {found.run_id}  rejected"
+        if found.note:
+            return f"{line}\nnote: {found.note}"
+        return line
+    if found.status == "cancelled":
+        return f"run {found.run_id}  cancelled"
+    return f"run {found.run_id}  stopped at {found.stopped_at}"
+
+
+def _emit(opened: runtime.Runtime, found: RunState, json_output: bool) -> None:
+    if json_output:
+        _dump(dataclasses.asdict(found))
+        return
+    typer.echo(_state_text(opened, found))
+
+
+def _recorded(opened: runtime.Runtime, run_id: str, line: str, no_resume: bool) -> None:
+    typer.echo(line)
+    if no_resume:
+        return
+    _emit(opened, runtime.resume(opened, run_id), False)
+
+
 def _stopped(yes: bool, prompt: str, preview: str) -> bool:
     if _allow(yes, prompt, preview):
         return False
@@ -240,45 +287,67 @@ def show_approval(
     _run(work)
 
 
+@app.command()
+def ask(request: str, json_output: Annotated[bool, typer.Option("--json")] = False) -> None:
+    def work(settings: Settings, opened: runtime.Runtime) -> None:
+        _emit(opened, runtime.ask(opened, request), json_output)
+
+    _session(work)
+
+
+@app.command()
+def resume(run_id: str, json_output: Annotated[bool, typer.Option("--json")] = False) -> None:
+    def work(settings: Settings, opened: runtime.Runtime) -> None:
+        _emit(opened, runtime.resume(opened, run_id), json_output)
+
+    _session(work)
+
+
 @approvals_app.command("approve")
 def approve(
     approval_id: str,
     note: Annotated[str, typer.Option("--note")] = "",
     yes: Annotated[bool, typer.Option("--yes")] = False,
+    no_resume: Annotated[bool, typer.Option("--no-resume")] = False,
 ) -> None:
-    def work(settings: Settings, store: Store) -> None:
-        stored = store.approval(approval_id)
+    def work(settings: Settings, opened: runtime.Runtime) -> None:
+        stored = opened.store.approval(approval_id)
         if _stopped(yes, "Approve?", _request_block(stored)):
             return
         decide_approval(
-            store,
-            Registry(domains.DOMAINS),
+            opened.store,
+            opened.registry,
             approval_id,
             "approve",
             channel="terminal",
             decided_by=settings.decided_by,
             note=note,
         )
-        typer.echo(f"Approved {approval_id}.")
+        _recorded(opened, stored.request.run_id, f"Approved {approval_id}.", no_resume)
 
-    _run(work)
+    _session(work)
 
 
 @approvals_app.command("reject")
-def reject(approval_id: str, note: Annotated[str, typer.Option("--note")] = "") -> None:
-    def work(settings: Settings, store: Store) -> None:
+def reject(
+    approval_id: str,
+    note: Annotated[str, typer.Option("--note")] = "",
+    no_resume: Annotated[bool, typer.Option("--no-resume")] = False,
+) -> None:
+    def work(settings: Settings, opened: runtime.Runtime) -> None:
+        stored = opened.store.approval(approval_id)
         decide_approval(
-            store,
-            Registry(domains.DOMAINS),
+            opened.store,
+            opened.registry,
             approval_id,
             "reject",
             channel="terminal",
             decided_by=settings.decided_by,
             note=note,
         )
-        typer.echo(f"Rejected {approval_id}.")
+        _recorded(opened, stored.request.run_id, f"Rejected {approval_id}.", no_resume)
 
-    _run(work)
+    _session(work)
 
 
 @approvals_app.command("edit")
@@ -287,17 +356,18 @@ def edit(
     args_text: Annotated[str, typer.Option("--args")],
     note: Annotated[str, typer.Option("--note")] = "",
     yes: Annotated[bool, typer.Option("--yes")] = False,
+    no_resume: Annotated[bool, typer.Option("--no-resume")] = False,
 ) -> None:
     edited = _json_object(args_text)
 
-    def work(settings: Settings, store: Store) -> None:
-        stored = store.approval(approval_id)
+    def work(settings: Settings, opened: runtime.Runtime) -> None:
+        stored = opened.store.approval(approval_id)
         preview = f"{_request_block(stored)}\nedited args: {_args(edited)}"
         if _stopped(yes, "Approve with these arguments?", preview):
             return
         decide_approval(
-            store,
-            Registry(domains.DOMAINS),
+            opened.store,
+            opened.registry,
             approval_id,
             "edit",
             channel="terminal",
@@ -305,9 +375,14 @@ def edit(
             note=note,
             edited_args=edited,
         )
-        typer.echo(f"Approved {approval_id} with edited arguments.")
+        _recorded(
+            opened,
+            stored.request.run_id,
+            f"Approved {approval_id} with edited arguments.",
+            no_resume,
+        )
 
-    _run(work)
+    _session(work)
 
 
 @escalations_app.command("list")
@@ -348,35 +423,43 @@ def retry(
     escalation_id: str,
     note: Annotated[str, typer.Option("--note")] = "",
     yes: Annotated[bool, typer.Option("--yes")] = False,
+    no_resume: Annotated[bool, typer.Option("--no-resume")] = False,
 ) -> None:
-    def work(settings: Settings, store: Store) -> None:
-        stored = store.escalation(escalation_id)
+    def work(settings: Settings, opened: runtime.Runtime) -> None:
+        stored = opened.store.escalation(escalation_id)
         if _stopped(yes, "Retry?", _escalation_block(stored)):
             return
         answer_escalation(
-            store,
+            opened.store,
             escalation_id,
             "retry",
             channel="terminal",
             decided_by=settings.decided_by,
             note=note,
         )
-        typer.echo(f"Retry recorded for {escalation_id}.")
+        _recorded(
+            opened, stored.escalation.run_id, f"Retry recorded for {escalation_id}.", no_resume
+        )
 
-    _run(work)
+    _session(work)
 
 
 @escalations_app.command("cancel")
-def cancel(escalation_id: str, note: Annotated[str, typer.Option("--note")] = "") -> None:
-    def work(settings: Settings, store: Store) -> None:
+def cancel(
+    escalation_id: str,
+    note: Annotated[str, typer.Option("--note")] = "",
+    no_resume: Annotated[bool, typer.Option("--no-resume")] = False,
+) -> None:
+    def work(settings: Settings, opened: runtime.Runtime) -> None:
+        stored = opened.store.escalation(escalation_id)
         answer_escalation(
-            store,
+            opened.store,
             escalation_id,
             "cancel",
             channel="terminal",
             decided_by=settings.decided_by,
             note=note,
         )
-        typer.echo(f"Cancelled {escalation_id}.")
+        _recorded(opened, stored.escalation.run_id, f"Cancelled {escalation_id}.", no_resume)
 
-    _run(work)
+    _session(work)

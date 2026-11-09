@@ -164,9 +164,10 @@ def test_a_run_that_raises_releases_its_lease_and_stops(tmp_path: Path) -> None:
         assert stopped == RunState(run_id=run.run_id, status="stopped", stopped_at="plan")
         runtime.store.acquire(run.run_id, OTHER)
         runtime.store.release(run.run_id, OTHER)
-        with pytest.raises(RunError) as raised:
+        with pytest.raises(Exception, match="no scripted reply left for plan"):
             resume(runtime, run.run_id)
-        assert str(raised.value) == f"run {run.run_id} stopped at plan and cannot be resumed"
+        assert state(runtime, run.run_id) == stopped
+        runtime.store.acquire(run.run_id, OTHER)
 
 
 class StealingModel(ScriptedModel):

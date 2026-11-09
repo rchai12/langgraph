@@ -127,3 +127,12 @@ The coding agent appends one entry per phase, in the form `docs/phase-convention
   - None
 - Follow-ups:
   - None
+
+## Phase 5e: the run commands (2026-11-09)
+- Tests: 542 -> 564 (given 16)
+- New public names: `graph.supervisor`: `RESUMABLE_STOPS`; `cli.main`: `ask`, `resume`
+- Changed files: 15
+- Deviations:
+  - None
+- Follow-ups:
+  - The working tree also has edits this phase did not make: docs/phases/phase-05e-run-commands.md, docs/verification/phase-05e-run-commands.md, docs/reviews/phase-05e-run-commands.md, and .claude/skills/phase-architect/SKILL.md.

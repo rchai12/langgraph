@@ -34,6 +34,7 @@ NODES = (
     "finish",
 )
 RECURSION_LIMIT = 100
+RESUMABLE_STOPS = ("route", "plan", "answer")
 RunStatus = Literal["waiting", "done", "rejected", "cancelled", "stopped"]
 STEP_FAILED_DETAIL = "the step failed"
 RESULT_DETAIL = "the result does not fit the action"
@@ -124,6 +125,9 @@ def start_run(graph: CompiledStateGraph, request: str, *, run_id: str) -> RunSta
 def resume_run(graph: CompiledStateGraph, store: Store, run_id: str) -> RunState:
     state = run_state(graph, run_id)
     if state.status == "stopped":
+        if state.stopped_at in RESUMABLE_STOPS:
+            _invoke(graph, None, run_id)
+            return run_state(graph, run_id)
         raise RunError(f"run {run_id} stopped at {state.stopped_at} and cannot be resumed")
     if state.status != "waiting":
         raise RunError(f"run {run_id} is not waiting")

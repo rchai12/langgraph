@@ -1,5 +1,14 @@
 # Phase 5e: the run commands
 
+## Corrections (2026-11-09, after the first review)
+
+The first attempt failed on two mistakes in this spec, not in the code:
+
+- `tests/e2e/test_cli_ask.py` numbered the plan approval `...03`; `decide()` takes the plan's decision id first, so it is `...04`, and every later id moves by one (the `--no-resume` test's step approval is `...07`, since that command also opens a runtime). The file below is corrected.
+- Two 5d tests still required a run stopped at `plan` or `route` to be refused, which R1 changes. Both get a given edit (Scope), so they check that such a resume runs the node again.
+
+The code already written for this phase stays; apply the corrected given file and the two edits, then run Acceptance again.
+
 ## Goal
 
 The whole loop from the terminal, closing Phase 5:
@@ -28,8 +37,27 @@ Phase 5d is built and verified, and everything is committed: N is `542`. **Secti
 | `src/conductor/cli/main.py` | `ask`, `resume`, and resuming in the five decision commands (Parts 2 and 3) |
 | `tests/e2e/test_cli_approvals.py`, `tests/e2e/test_cli_escalations.py`, `tests/e2e/test_cli_approvals_more.py` | given edits: every decision command these tests run gets `--no-resume`, since their requests belong to runs that have no checkpoint; nothing else changes (the files are given in full below) |
 | `tests/e2e/test_cli_ask.py`, `tests/integration/test_resume_stopped.py` | given |
+| `tests/integration/test_runtime.py` | given edit: in `test_a_run_that_raises_releases_its_lease_and_stops`, the last three lines (the `pytest.raises(RunError)` block and its message check) become the four lines below |
+| `tests/integration/test_runtime_more.py` | given edit: in `test_run_errors_name_the_run_and_the_node`, the last three lines (the `pytest.raises(RunError) as stopped` block and its message check) become the three lines below |
 | `tests/e2e/test_cli_ask_more.py` | new: the coder's tests |
 | `docs/progress.md` | one new entry |
+
+The edit to `tests/integration/test_runtime.py`:
+
+```python
+        with pytest.raises(Exception, match="no scripted reply left for plan"):
+            resume(runtime, run.run_id)
+        assert state(runtime, run.run_id) == stopped
+        runtime.store.acquire(run.run_id, OTHER)
+```
+
+The edit to `tests/integration/test_runtime_more.py`:
+
+```python
+        with pytest.raises(ScriptError):
+            resume(runtime, run.run_id)
+        assert state(runtime, run.run_id).stopped_at == "route"
+```
 
 ## Out of scope
 
@@ -82,7 +110,7 @@ Errors are one `Error: <message>` line on stderr and exit 1, as in 4c: `Settings
 
 - The 4c tests decide on requests added straight to the store, for a run id with no checkpoint; resuming them would print `Error: no run ...` and exit 1. Hence `--no-resume` in those tests, the only change to them.
 - LangGraph runs a stopped node again from its first line when invoked with `None` (5d's spike). `route`, `plan`, and `answer` do nothing before their model call that changes anything outside the run: their only effects are the model's events, which are logged again with a new decision id. `run_step` runs its runner; `ask_plan`, `ask_step`, and `record_escalation` add rows to the store, so running them again would add a second request or escalation.
-- In the given tests, ids come from a counter in the order 5d's runtime takes them: `open_runtime` takes the holder id first, then `ask` the run id, then the graph takes request, escalation, and note ids as it goes. Each command opens a new runtime and so takes a new holder id.
+- In the given tests, ids come from a counter in the order they are taken: `open_runtime` takes the holder id first, then `ask` the run id; then, in the graph, each `decide()` takes a decision id before its reply, and policy, store, and runner take request, escalation, and note ids as they go. Each command, `--no-resume` ones included, opens a new runtime and so takes a new holder id. For `demo: note Milk`: holder `01`, run `02`, plan decision `03`, plan approval `04`.
 
 ## Requirements
 
@@ -192,14 +220,14 @@ def test_a_read_only_request_is_answered(replies: list) -> None:
 def test_each_decision_resumes_the_run(replies: list) -> None:
     replies[:] = [("plan", NOTE_PLAN)]
     asked = run("ask", "demo: note Milk")
-    assert (asked.exit_code, asked.stdout) == (0, plan_block(3, 2))
-    plan = run("approvals", "approve", ID(3), "--yes")
-    assert (plan.exit_code, plan.stdout) == (0, f"Approved {ID(3)}.\n" + plan_block(5, 2, "step"))
+    assert (asked.exit_code, asked.stdout) == (0, plan_block(4, 2))
+    plan = run("approvals", "approve", ID(4), "--yes")
+    assert (plan.exit_code, plan.stdout) == (0, f"Approved {ID(4)}.\n" + plan_block(6, 2, "step"))
     replies[:] = [("answer", REPLY)]
-    step = run("approvals", "approve", ID(5), "--yes")
+    step = run("approvals", "approve", ID(6), "--yes")
     assert (step.exit_code, step.stdout) == (
         0,
-        f"Approved {ID(5)}.\nrun {ID(2)}  done\nDone.\n",
+        f"Approved {ID(6)}.\nrun {ID(2)}  done\nDone.\n",
     )
 
 
@@ -207,10 +235,10 @@ def test_each_decision_resumes_the_run(replies: list) -> None:
 def test_a_rejection_ends_the_run(replies: list) -> None:
     replies[:] = [("plan", NOTE_PLAN)]
     run("ask", "demo: note Milk")
-    result = run("approvals", "reject", ID(3), "--note", "not now")
+    result = run("approvals", "reject", ID(4), "--note", "not now")
     assert (result.exit_code, result.stdout) == (
         0,
-        f"Rejected {ID(3)}.\nrun {ID(2)}  rejected\nnote: not now\n",
+        f"Rejected {ID(4)}.\nrun {ID(2)}  rejected\nnote: not now\n",
     )
 
 
@@ -218,10 +246,10 @@ def test_a_rejection_ends_the_run(replies: list) -> None:
 def test_no_resume_only_records_and_resume_continues(replies: list) -> None:
     replies[:] = [("plan", NOTE_PLAN)]
     run("ask", "demo: note Milk")
-    recorded = run("approvals", "approve", ID(3), "--yes", "--no-resume")
-    assert (recorded.exit_code, recorded.stdout) == (0, f"Approved {ID(3)}.\n")
+    recorded = run("approvals", "approve", ID(4), "--yes", "--no-resume")
+    assert (recorded.exit_code, recorded.stdout) == (0, f"Approved {ID(4)}.\n")
     resumed = run("resume", ID(2))
-    assert (resumed.exit_code, resumed.stdout) == (0, plan_block(5, 2, "step"))
+    assert (resumed.exit_code, resumed.stdout) == (0, plan_block(7, 2, "step"))
 
 
 def test_an_escalation_and_its_answers(replies: list) -> None:
@@ -250,13 +278,13 @@ def test_json_output(replies: list) -> None:
     assert json.loads(asked.stdout) == {
         "run_id": ID(2),
         "status": "waiting",
-        "approval_id": ID(3),
+        "approval_id": ID(4),
         "escalation_id": None,
         "reply": None,
         "note": "",
         "stopped_at": None,
     }
-    run("approvals", "reject", ID(3), "--no-resume")
+    run("approvals", "reject", ID(4), "--no-resume")
     resumed = run("resume", ID(2), "--json")
     assert json.loads(resumed.stdout)["status"] == "rejected"
 
@@ -267,10 +295,10 @@ def test_a_busy_run_keeps_the_decision_and_says_why(replies: list) -> None:
     run("ask", "demo: note Milk")
     with runtime.open_runtime(get_settings()) as opened:
         opened.store.acquire(ID(2), "9" * 32)
-    result = run("approvals", "approve", ID(3), "--yes")
+    result = run("approvals", "approve", ID(4), "--yes")
     assert (result.exit_code, result.stdout, result.stderr) == (
         1,
-        f"Approved {ID(3)}.\n",
+        f"Approved {ID(4)}.\n",
         f"Error: run {ID(2)} is busy\n",
     )
 
@@ -837,7 +865,7 @@ The standard table of `docs/phase-conventions.md`, with:
 - the searches, each with no output:
   - `git grep --untracked -n -E "^(from|import) (langgraph|conductor\.llm|conductor\.graph(\.supervisor)? import [^R])" -- src/conductor/cli`
   - `git grep --untracked -n -E "Registry\(|from conductor\.runtime import|start_run|resume_run" -- src/conductor/cli`
-- `git diff --stat HEAD -- src/conductor/runtime.py src/conductor/decisions.py src/conductor/store.py src/conductor/policy.py src/conductor/routing src/conductor/planning src/conductor/contracts tests/unit tests/integration/test_supervisor.py tests/integration/test_runtime.py tests/support.py` prints nothing.
+- `git diff --stat HEAD -- src/conductor/runtime.py src/conductor/decisions.py src/conductor/store.py src/conductor/policy.py src/conductor/routing src/conductor/planning src/conductor/contracts tests/unit tests/integration/test_supervisor.py tests/support.py` prints nothing; `git diff HEAD -- tests/integration/test_runtime.py tests/integration/test_runtime_more.py` shows only the two given edits.
 
 ## Report
 

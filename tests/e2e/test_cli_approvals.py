@@ -76,7 +76,15 @@ def test_show_a_pending_request(db: Store) -> None:
 def test_show_a_decided_request(db: Store) -> None:
     note_request(db)
     edit = run(
-        "approvals", "edit", FIRST, "--args", '{"title": "Eggs"}', "--note", "fewer", "--yes"
+        "approvals",
+        "edit",
+        "--no-resume",
+        FIRST,
+        "--args",
+        '{"title": "Eggs"}',
+        "--note",
+        "fewer",
+        "--yes",
     )
     assert (edit.exit_code, edit.stdout) == (0, f"Approved {FIRST} with edited arguments.\n")
     assert run("approvals", "show", FIRST).stdout == (
@@ -90,7 +98,7 @@ def test_show_a_decided_request(db: Store) -> None:
 
 def test_approve_asks_first(db: Store) -> None:
     note_request(db)
-    result = runner.invoke(app, ["approvals", "approve", FIRST], input="y\n")
+    result = runner.invoke(app, ["approvals", "approve", "--no-resume", FIRST], input="y\n")
     assert result.exit_code == 0
     assert result.stdout == SHOWN + "Approve? [y/N]: y\n" + f"Approved {FIRST}.\n"
     assert db.approval(FIRST).decision.verdict == "approve"
@@ -98,7 +106,7 @@ def test_approve_asks_first(db: Store) -> None:
 
 def test_approve_can_be_declined(db: Store) -> None:
     note_request(db)
-    result = runner.invoke(app, ["approvals", "approve", FIRST], input="n\n")
+    result = runner.invoke(app, ["approvals", "approve", "--no-resume", FIRST], input="n\n")
     assert result.exit_code == 0
     assert result.stdout.endswith("Approve? [y/N]: n\nNothing recorded.\n")
     assert db.approval(FIRST).decision is None
@@ -107,8 +115,8 @@ def test_approve_can_be_declined(db: Store) -> None:
 def test_approve_with_yes_and_reject_do_not_ask(db: Store) -> None:
     note_request(db)
     add(db, SECOND, "plan", (ECHO, NOTE), 8)
-    approved = run("approvals", "approve", FIRST, "--yes")
-    rejected = run("approvals", "reject", SECOND, "--note", "not today")
+    approved = run("approvals", "approve", "--no-resume", FIRST, "--yes")
+    rejected = run("approvals", "reject", "--no-resume", SECOND, "--note", "not today")
     assert (approved.stdout, rejected.stdout) == (f"Approved {FIRST}.\n", f"Rejected {SECOND}.\n")
     decision = db.approval(SECOND).decision
     assert (decision.verdict, decision.note) == ("reject", "not today")
@@ -117,7 +125,7 @@ def test_approve_with_yes_and_reject_do_not_ask(db: Store) -> None:
 def test_an_edit_shows_the_new_arguments_before_asking(db: Store) -> None:
     note_request(db)
     result = runner.invoke(
-        app, ["approvals", "edit", FIRST, "--args", '{"title": "Eggs"}'], input="y\n"
+        app, ["approvals", "edit", "--no-resume", FIRST, "--args", '{"title": "Eggs"}'], input="y\n"
     )
     assert result.stdout == (
         SHOWN
@@ -129,7 +137,15 @@ def test_an_edit_shows_the_new_arguments_before_asking(db: Store) -> None:
 
 def test_an_edit_that_does_not_fit(db: Store) -> None:
     note_request(db)
-    result = run("approvals", "edit", FIRST, "--args", '{"title": "", "tags": ["Home"]}', "--yes")
+    result = run(
+        "approvals",
+        "edit",
+        "--no-resume",
+        FIRST,
+        "--args",
+        '{"title": "", "tags": ["Home"]}',
+        "--yes",
+    )
     assert result.exit_code == 1
     assert result.stderr == (
         "Error: decision refused: invalid_edit\n"
@@ -142,7 +158,7 @@ def test_an_edit_that_does_not_fit(db: Store) -> None:
 @pytest.mark.parametrize("given", ["[1]", "not json", '{"title": NaN}'])
 def test_edit_arguments_must_be_a_json_object(db: Store, given: str) -> None:
     note_request(db)
-    result = run("approvals", "edit", FIRST, "--args", given, "--yes")
+    result = run("approvals", "edit", "--no-resume", FIRST, "--args", given, "--yes")
     assert (result.exit_code, result.stderr) == (1, "Error: --args must be a JSON object\n")
 
 
@@ -150,13 +166,19 @@ def test_edit_arguments_must_be_a_json_object(db: Store, given: str) -> None:
     ("args", "message"),
     [
         (("show", "9" * 32), f"Error: no approval {'9' * 32}\n"),
-        (("approve", FIRST, "--yes"), f"Error: approval {FIRST} is already decided\n"),
-        (("reject", FIRST, "--note", "x" * 501), "Error: note must be at most 500 characters\n"),
+        (
+            ("approve", "--no-resume", FIRST, "--yes"),
+            f"Error: approval {FIRST} is already decided\n",
+        ),
+        (
+            ("reject", "--no-resume", FIRST, "--note", "x" * 501),
+            "Error: note must be at most 500 characters\n",
+        ),
     ],
 )
 def test_errors(db: Store, args: tuple[str, ...], message: str) -> None:
     note_request(db)
-    run("approvals", "reject", FIRST)
+    run("approvals", "reject", "--no-resume", FIRST)
     result = run("approvals", *args)
     assert (result.exit_code, result.stderr) == (1, message)
 
@@ -164,6 +186,6 @@ def test_errors(db: Store, args: tuple[str, ...], message: str) -> None:
 def test_an_action_that_is_not_registered(db: Store, monkeypatch: pytest.MonkeyPatch) -> None:
     note_request(db)
     monkeypatch.setattr(domains, "DOMAINS", ())
-    result = run("approvals", "approve", FIRST, "--yes")
+    result = run("approvals", "approve", "--no-resume", FIRST, "--yes")
     assert (result.exit_code, result.stderr) == (1, "Error: no action demo.note\n")
     assert db.approval(FIRST).decision is None

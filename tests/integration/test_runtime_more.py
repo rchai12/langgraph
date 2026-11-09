@@ -176,6 +176,6 @@ def test_run_errors_name_the_run_and_the_node(monkeypatch: pytest.MonkeyPatch) -
         with pytest.raises(ScriptError):
             ask(runtime, "Book a flight to Lisbon")
         [run] = runtime.log.runs()
-        with pytest.raises(RunError) as stopped:
+        with pytest.raises(ScriptError):
             resume(runtime, run.run_id)
-        assert str(stopped.value) == f"run {run.run_id} stopped at route and cannot be resumed"
+        assert state(runtime, run.run_id).stopped_at == "route"
