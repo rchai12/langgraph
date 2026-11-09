@@ -118,7 +118,7 @@ RULES = [
     (
         domain.name,
         f"{domain.name}.{rule.name}",
-        tuple(p.split(" ") for p in rule.phrases),
+        tuple(tuple(p.split(" ")) for p in rule.phrases),
     )
     for domain in (demo.DOMAIN, LAB)
     for rule in domain.rules

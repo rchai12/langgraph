@@ -59,7 +59,7 @@ Any node can **escalate**: the run records why, interrupts, and waits for the pe
 
 ### Plan
 
-A decision point whose output is a `Plan`: an ordered list of 1 to 8 `Step`s, each naming one registered action (an enumeration built from the chosen domain's actions only) and its arguments. Steps run in order. A step does not read another step's output through the model. When an agent action needs earlier results, code passes them in its `TaskSpec.context`.
+A decision point (`plan`, `planning/plan.py`, critical; Phase 5b) whose output becomes a `Plan`: an ordered list of up to 8 steps, each one of the chosen domain's actions with that action's own argument schema (a union discriminated by the action's name, decided 2026-11-09), so Ollama's grammar holds every argument to its contract (it cuts and bends values to fit, silently; the approval shows the exact arguments). The planner may answer with no steps, which escalates as `invalid_plan`: no action fits. Code names each step `<domain>.<action>`, fills the argument defaults, and runs plan checking again. Steps run in order. A step does not read another step's output through the model. When an agent action needs earlier results, code passes them in its `TaskSpec.context`.
 
 ### Check plan (code)
 
@@ -85,7 +85,7 @@ Each action exists in the routed domain; each step's arguments validate against 
 
 ### Answer
 
-A decision point that turns the results into the reply, with the results passed in as data. It cannot call tools.
+A decision point (`answer`, `planning/answer.py`, critical; Phase 5b) that turns the request and the steps' validated results into the reply (at most 2000 characters, not blank), with the results passed in as data. It cannot call tools.
 
 ## Contracts (`conductor/contracts/`, pure Pydantic, no project imports)
 
