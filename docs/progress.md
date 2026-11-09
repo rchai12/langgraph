@@ -100,3 +100,12 @@ The coding agent appends one entry per phase, in the form `docs/phase-convention
   - None
 - Follow-ups:
   - The verification probe compares phrase words from `str.split` (lists) to tuples, so its matcher never matches; with those words made tuples the same probe reports FAILURES 0.
+
+## Phase 5b: planning and answering (2026-11-09)
+- Tests: 472 -> 500 (given 20)
+- New public names: `planning.plan`: `NO_FIT_MESSAGE`, `PLAN_REPLY_TOKENS`, `PlanInputs`, `Planned`, `plan_output`, `plan_point`, `plan_fields`, `plan_request`; `planning.answer`: `RESULTS_MESSAGE`, `BLANK_MESSAGE`, `ANSWER_REPLY_TOKENS`, `StepOutcome`, `AnswerInputs`, `AnswerOutput`, `ANSWER_POINT`, `Answered`, `answer_request`
+- Changed files: 10
+- Deviations:
+  - None
+- Follow-ups:
+  - None

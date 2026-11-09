@@ -36,6 +36,8 @@ A bug here lets the agent act without approval, lose its record, or accept outpu
 - `decisions.py` (a decision is recorded only after the policy accepts it; Phase 4c)
 - `routing/rules.py` (which domain a request goes to without the model; Phase 5a)
 - `routing/route.py` (the classifier, and every way routing escalates; Phase 5a)
+- `planning/plan.py` (the planner's schema from the registry, and every way planning escalates; Phase 5b)
+- `planning/answer.py` (the reply from the results, and every way it escalates; Phase 5b)
 
 ## Commands
 
