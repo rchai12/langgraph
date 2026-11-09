@@ -50,7 +50,9 @@ request ─► route ─► plan ─► check plan ─► for each step: approve
           labels)                                                     subagent
 ```
 
-Any node can **escalate**: the run records why, interrupts, and waits for the person to answer (clarify, edit, or cancel).
+Any node can **escalate**: the run records why, interrupts, and waits for the person to answer `retry` (the node that escalated runs again; after a failed step, the step asks for its approval again) or `cancel` (decided 2026-11-09).
+
+Built in Phase 5c (`graph/supervisor.py`, critical) with these rules, from a spike of langgraph 1.2.20: a resumed node runs again from its first line, so requests and escalations are created in their own nodes (`ask_plan`, `ask_step`, `record_escalation`) and the waiting nodes only read before `interrupt`; the resume value carries only an id, and the decision or answer is read from `conductor.db` and judged by the policy again; the state holds JSON only; steps run through an injected `StepRunner` and every result is parsed by its action's result contract (a failure escalates as `tool_error`, earlier steps are not undone); `Command(resume=...)` on an unknown thread would silently start a new run, so resuming checks first.
 
 ### Route
 
@@ -208,7 +210,7 @@ cli, web  ─►  graph  ─►  routing, planning, policy, domains  ─►  llm
 ## Privacy and safety boundary
 
 - **Local models only.** `CONDUCTOR_OLLAMA_HOST` must be a loopback address; settings refuse anything else. Moving any decision point to a hosted model sends request text, tool results, and finance data off the machine, and needs this document revised first (the `finances` architecture has the same rule).
-- **No telemetry.** LangGraph depends on `langchain-core`, which depends on `langsmith`. Tracing to LangSmith must stay off whatever the environment says; a guard test arrives with the phase that adds `langgraph`.
+- **No telemetry.** LangGraph depends on `langchain-core`, which depends on `langsmith`. With `LANGSMITH_TRACING=true` and a key in the environment, a run would send its whole state to LangSmith (seen in a spike, 2026-11-09). `conductor.graph` sets every tracing variable to `false` when imported and runs every `invoke` inside `langsmith.tracing_context(enabled=False)` (Phase 5c).
 - **Network.** The only connections are to Ollama on loopback, MCP servers as child processes over stdio, and the approvals page bound to 127.0.0.1.
 - **Logs hold everything**, including finance data from tool results. They live under the gitignored data folder with owner-only permissions and are never sent anywhere.
 - **Tests** use synthetic data and touch no network beyond servers they start on 127.0.0.1.
