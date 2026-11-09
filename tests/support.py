@@ -3,6 +3,7 @@
 New tests import these instead of copying them.
 """
 
+import hashlib
 import json
 import socketserver
 import threading
@@ -51,7 +52,16 @@ class FakeOllama:
         self.chat_body = json.dumps(fields).encode()
 
     def models(self, *names: str) -> None:
-        listed = [{"name": name, "model": name, "size": 1} for name in names]
+        """List these models, each with the SHA-256 of its name as its digest."""
+        listed = [
+            {
+                "name": name,
+                "model": name,
+                "size": 1,
+                "digest": hashlib.sha256(name.encode()).hexdigest(),
+            }
+            for name in names
+        ]
         self.body = json.dumps({"models": listed}).encode()
 
 

@@ -43,7 +43,7 @@ Unless the spec adds more, run before you report:
 | the spec's coverage command | `.venv/bin/python -m coverage report --include=… --fail-under=100`, run right after `check.py` on the data that run left: exit 0 and its `TOTAL` line at `100%` |
 | each of the spec's searches | no output, or exactly the lines the spec names |
 | `git status --short` | only the paths in the Scope table |
-| `.venv/bin/python scripts/check_reports.py`, after writing the progress entry | `Reports OK.` |
+| `.venv/bin/python scripts/check_reports.py --phase <the spec's phase id>`, after writing the progress entry | `Reports OK.` |
 
 ### Report
 
@@ -90,6 +90,6 @@ Then, under `## Findings`, one line per finding in this form, or `None`:
 
 `<requirement id or section> | <file>:<line> | expected <...> | found <...>`
 
-Then, after the findings and an empty line, `Parts that needed a repair: <none, or the parts>`, an empty line, and `Built beyond the spec: <none, or what>`, and after that any detail you think useful (gate output, probe output, spot-check results). The head keeps its exact lines: the heading on line 1, the five fields on lines 3 to 7, `## Findings` on line 9. When the report is written, run `.venv/bin/python scripts/check_reports.py`; it must print `Reports OK.`. If it names your report, correct the report's form (only its form) and run it again.
+Then, after the findings and an empty line, `Parts that needed a repair: <none, or the parts>`, an empty line, and `Built beyond the spec: <none, or what>`, and after that any detail you think useful (gate output, probe output, spot-check results). The head keeps its exact lines: the heading on line 1, the five fields on lines 3 to 7, `## Findings` on line 9. When the report is written, run `.venv/bin/python scripts/check_reports.py --phase <the phase id>`; it must print `Reports OK.`. If it names your report, correct the report's form (only its form) and run it again.
 
 If the verdict is FAIL, send the coder each finding as: the requirement, what was observed, and what is required. Do not prescribe the code.

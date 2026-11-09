@@ -91,3 +91,12 @@ The coding agent appends one entry per phase, in the form `docs/phase-convention
   - The Phase 4b progress entry was missing, so this phase adds it; `check_reports.py` rejects the committed 4b review without one.
 - Follow-ups:
   - None
+
+## Phase 5a: routing (2026-11-09)
+- Tests: 423 -> 472 (given 37)
+- New public names: `registry`: `RESERVED_DOMAIN`, `PREFIX_RULE`, `MAX_PHRASES`, `Rule`, `Domain.rules`; `routing.rules`: `RuleRoute`, `RuleConflict`, `words`, `match_rules`; `routing.route`: `REQUEST_MESSAGE`, `NO_DOMAINS_MESSAGE`, `CONFLICT_MESSAGE`, `EMPTY_MESSAGE`, `NO_FIT_MESSAGE`, `ROUTE_REPLY_TOKENS`, `RouteInputs`, `Routed`, `route_output`, `route_point`, `route_fields`, `route_request`; `reports`: `PHASE_MESSAGE`; `llm.tags`: `fetch_models`
+- Changed files: 23
+- Deviations:
+  - None
+- Follow-ups:
+  - The verification probe compares phrase words from `str.split` (lists) to tuples, so its matcher never matches; with those words made tuples the same probe reports FAILURES 0.

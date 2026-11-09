@@ -4,7 +4,7 @@ from pydantic import Field
 
 from conductor.contracts.base import Contract, Id, Name
 from conductor.llm.points import DecisionPoint
-from conductor.registry import Action, Domain
+from conductor.registry import Action, Domain, Rule
 
 
 class EchoArgs(Contract):
@@ -65,6 +65,10 @@ DOMAIN = Domain(
             DelegateArgs,
             DelegateResult,
         ),
+    ),
+    rules=(
+        Rule("echo", ("echo", "repeat after me")),
+        Rule("note", ("note", "write down")),
     ),
 )
 

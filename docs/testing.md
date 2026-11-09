@@ -34,6 +34,8 @@ A bug here lets the agent act without approval, lose its record, or accept outpu
 - `policy.py` (which steps wait for a person, and what a decision allows; Phase 4a)
 - `store.py` (approvals, escalations, and leases kept between processes; Phase 4b)
 - `decisions.py` (a decision is recorded only after the policy accepts it; Phase 4c)
+- `routing/rules.py` (which domain a request goes to without the model; Phase 5a)
+- `routing/route.py` (the classifier, and every way routing escalates; Phase 5a)
 
 ## Commands
 

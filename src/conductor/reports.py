@@ -26,6 +26,7 @@ _REPAIRED_MESSAGE = "expected `Parts that needed a repair: <parts or none>`"
 _BUILT_MESSAGE = "expected `Built beyond the spec: <what or none>`"
 _PASS_FINDINGS_MESSAGE = "a PASS review has no findings"
 _FAIL_FINDINGS_MESSAGE = "a FAIL review lists at least one finding"
+PHASE_MESSAGE = "phase must be a phase id such as 5a"
 
 _HEADING = re.compile(r"^## Phase ([1-9][0-9]*[a-z]?): (.+) \(([0-9]{4}-[0-9]{2}-[0-9]{2})\)$")
 _TESTS = re.compile(r"^- Tests: ([0-9]+) -> ([0-9]+) \(given ([0-9]+)\)$")
@@ -43,6 +44,7 @@ _ARCHITECT = re.compile(r"^- For the architect: (.+)$")
 _FINDING = re.compile(r"^([^|]+) \| ([^|:]+):([0-9]+) \| expected ([^|]+) \| found (.+)$")
 _REPAIRED = re.compile(r"^Parts that needed a repair: (.+)$")
 _BUILT = re.compile(r"^Built beyond the spec: (.+)$")
+_PHASE = re.compile(r"^[1-9][0-9]*[a-z]?$")
 
 
 @dataclass(frozen=True)
@@ -185,7 +187,9 @@ def parse_review(text: str, path: str) -> tuple[Review | None, list[Problem]]:
     return review, []
 
 
-def check_reports(root: Path) -> list[Problem]:
+def check_reports(root: Path, *, phase: str | None = None) -> list[Problem]:
+    if phase is not None and _PHASE.fullmatch(phase) is None:
+        raise ValueError(PHASE_MESSAGE)
     problems: list[Problem] = []
     progress = root / "docs" / "progress.md"
     if not progress.is_file():
@@ -196,8 +200,18 @@ def check_reports(root: Path) -> list[Problem]:
         problems.extend(found)
         phases = {entry.phase for entry in entries}
     reviews = root / "docs" / "reviews"
-    if not reviews.is_dir():
-        return problems
+    if reviews.is_dir():
+        _check_reviews(root, reviews, phases, problems)
+    if phase is not None:
+        specs = [phase_of(path.name) for path in (root / "docs" / "phases").glob("*.md")]
+        if phase not in specs:
+            problems.append(Problem("docs/phases", 1, f"no spec for Phase {phase}"))
+        if phase not in phases:
+            problems.append(Problem("docs/progress.md", 1, f"no progress entry for Phase {phase}"))
+    return problems
+
+
+def _check_reviews(root: Path, reviews: Path, phases: set[str], problems: list[Problem]) -> None:
     for path in sorted(reviews.glob("*.md")):
         relative = f"docs/reviews/{path.name}"
         if not (root / "docs" / "phases" / path.name).is_file():
@@ -209,7 +223,6 @@ def check_reports(root: Path) -> list[Problem]:
             continue
         if review.phase not in phases:
             problems.append(Problem(relative, 1, f"no progress entry for Phase {review.phase}"))
-    return problems
 
 
 def _at(lines: list[str], index: int) -> str | None:

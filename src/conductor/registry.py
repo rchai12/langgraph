@@ -12,6 +12,11 @@ _NAME = re.compile(r"^[a-z][a-z0-9_]{0,31}$")
 _TARGET = re.compile(r"^[A-Za-z][A-Za-z0-9_.-]{0,63}$")
 _KINDS = ("tool", "agent")
 _EFFECTS = ("read", "propose", "write", "implement")
+_PHRASE = re.compile(r"^[a-z0-9]+(?: [a-z0-9]+){0,5}$")
+
+RESERVED_DOMAIN = "unknown"
+PREFIX_RULE = "prefix"
+MAX_PHRASES = 20
 
 
 @dataclass(frozen=True)
@@ -26,10 +31,17 @@ class Action:
 
 
 @dataclass(frozen=True)
+class Rule:
+    name: str
+    phrases: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class Domain:
     name: str
     description: str
     actions: tuple[Action, ...]
+    rules: tuple[Rule, ...] = ()
 
 
 class RegistryError(Exception):
@@ -83,6 +95,8 @@ def _is_contract(value: object) -> bool:
 def _check_domain(domain: Domain, seen: set[str]) -> None:
     if _NAME.fullmatch(domain.name) is None:
         raise RegistryError(f"domain {domain.name}: not a valid name")
+    if domain.name == RESERVED_DOMAIN:
+        raise RegistryError(f"domain {domain.name}: the name is reserved")
     if domain.name in seen:
         raise RegistryError(f"domain {domain.name}: declared twice")
     seen.add(domain.name)
@@ -93,6 +107,7 @@ def _check_domain(domain: Domain, seen: set[str]) -> None:
     seen_actions: set[str] = set()
     for action in domain.actions:
         _check_action(domain.name, action, seen_actions)
+    _check_rules(domain.name, domain.rules)
 
 
 def _check_action(domain_name: str, action: Action, seen: set[str]) -> None:
@@ -116,3 +131,27 @@ def _check_action(domain_name: str, action: Action, seen: set[str]) -> None:
         raise RegistryError(f"{where}: result must be a Contract")
     if action.effect == "implement" and action.kind != "agent":
         raise RegistryError(f"{where}: implement needs an agent action")
+
+
+def _check_rules(domain_name: str, rules: tuple[Rule, ...]) -> None:
+    seen: set[str] = set()
+    for rule in rules:
+        rule_id = f"{domain_name}.{rule.name}"
+        where = f"rule {rule_id}"
+        if _NAME.fullmatch(rule.name) is None:
+            raise RegistryError(f"{where}: not a valid name")
+        if rule.name == PREFIX_RULE:
+            raise RegistryError(f"{where}: the name is reserved")
+        if len(rule_id) > 64:
+            raise RegistryError(f"{where}: the id is longer than 64 characters")
+        if rule.name in seen:
+            raise RegistryError(f"{where}: declared twice")
+        seen.add(rule.name)
+        if len(rule.phrases) < 1 or len(rule.phrases) > MAX_PHRASES:
+            raise RegistryError(f"{where}: needs 1 to 20 phrases")
+        for number, phrase in enumerate(rule.phrases, start=1):
+            if len(phrase) > 64 or _PHRASE.fullmatch(phrase) is None:
+                raise RegistryError(
+                    f"{where}: phrase {number} must be 1 to 6 lowercase words"
+                    " of at most 64 characters"
+                )

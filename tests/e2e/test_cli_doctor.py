@@ -25,7 +25,7 @@ def test_everything_ready(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> No
         "ok    python 3.12.13\n"
         f"ok    data folder {tmp_path / 'data'}\n"
         f"ok    ollama {host}\n"
-        "ok    model qwen3.8:27b\n"
+        "ok    model qwen3.8:27b: digest ed7293edc50a\n"
         "All checks passed.\n"
     )
     assert result.stderr == ""
@@ -81,7 +81,11 @@ def test_something_else_answering(
             ["qwen3-coder:30b"],
             "FAIL  model qwen3.8:27b: not pulled (run: ollama pull qwen3.8:27b)",
         ),
-        ("qwen3-coder", ["qwen3-coder:latest"], "ok    model qwen3-coder"),
+        (
+            "qwen3-coder",
+            ["qwen3-coder:latest"],
+            "ok    model qwen3-coder: digest 8dfab79fc4f2",
+        ),
         (
             "qwen3-coder",
             ["qwen3-coder:30b"],
@@ -110,7 +114,7 @@ def test_a_proxy_in_the_environment_is_not_used(monkeypatch: pytest.MonkeyPatch)
         result = run("doctor")
     assert result.stdout.splitlines()[2:] == [
         f"ok    ollama {host}",
-        "ok    model qwen3.8:27b",
+        "ok    model qwen3.8:27b: digest ed7293edc50a",
         "All checks passed.",
     ]
 

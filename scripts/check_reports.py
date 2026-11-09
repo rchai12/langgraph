@@ -1,6 +1,6 @@
 """Print problems in progress entries and reviews.
 
-Run it as: .venv/bin/python scripts/check_reports.py [--root PATH]
+Run it as: .venv/bin/python scripts/check_reports.py [--root PATH] [--phase ID]
 """
 
 import argparse
@@ -20,8 +20,17 @@ def main(argv: list[str] | None = None) -> int:
         default=ROOT,
         help="Repository root (default: the folder above scripts/).",
     )
+    parser.add_argument(
+        "--phase",
+        default=None,
+        help="Also require this phase's spec and progress entry.",
+    )
     options = parser.parse_args(argv)
-    problems = check_reports(options.root)
+    try:
+        problems = check_reports(options.root, phase=options.phase)
+    except ValueError as error:
+        print(f"Error: {error}", file=sys.stderr)
+        return 2
     for problem in problems:
         print(problem.text)
     count = len(problems)
