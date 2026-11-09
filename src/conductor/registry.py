@@ -9,6 +9,7 @@ ActionKind = Literal["tool", "agent"]
 Effect = Literal["read", "propose", "write", "implement"]
 
 _NAME = re.compile(r"^[a-z][a-z0-9_]{0,31}$")
+_ENV_NAME = re.compile(r"^[A-Z][A-Z0-9_]{0,63}$")
 _TARGET = re.compile(r"^[A-Za-z][A-Za-z0-9_.-]{0,63}$")
 _KINDS = ("tool", "agent")
 _EFFECTS = ("read", "propose", "write", "implement")
@@ -20,6 +21,12 @@ MAX_PHRASES = 20
 
 
 @dataclass(frozen=True)
+class McpServer:
+    name: str
+    env: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
 class Action:
     name: str
     description: str
@@ -28,6 +35,7 @@ class Action:
     effect: Effect
     args: type[Contract]
     result: type[Contract]
+    server: str | None = None
 
 
 @dataclass(frozen=True)
@@ -42,6 +50,7 @@ class Domain:
     description: str
     actions: tuple[Action, ...]
     rules: tuple[Rule, ...] = ()
+    servers: tuple[McpServer, ...] = ()
 
 
 class RegistryError(Exception):
@@ -55,8 +64,9 @@ class NotRegistered(LookupError):
 class Registry:
     def __init__(self, domains: Sequence[Domain]) -> None:
         seen: set[str] = set()
+        servers: dict[str, str] = {}
         for domain in domains:
-            _check_domain(domain, seen)
+            _check_domain(domain, seen, servers)
         self._domains = tuple(domains)
         self._by_name = {domain.name: domain for domain in self._domains}
 
@@ -92,7 +102,7 @@ def _is_contract(value: object) -> bool:
     return isinstance(value, type) and issubclass(value, Contract)
 
 
-def _check_domain(domain: Domain, seen: set[str]) -> None:
+def _check_domain(domain: Domain, seen: set[str], servers: dict[str, str]) -> None:
     if _NAME.fullmatch(domain.name) is None:
         raise RegistryError(f"domain {domain.name}: not a valid name")
     if domain.name == RESERVED_DOMAIN:
@@ -102,15 +112,35 @@ def _check_domain(domain: Domain, seen: set[str]) -> None:
     seen.add(domain.name)
     if _bad_length(domain.description):
         raise RegistryError(f"domain {domain.name}: description must be 1 to 200 characters")
+    _check_servers(domain, servers)
     if not domain.actions:
         raise RegistryError(f"domain {domain.name}: has no actions")
     seen_actions: set[str] = set()
+    known = {server.name for server in domain.servers}
     for action in domain.actions:
-        _check_action(domain.name, action, seen_actions)
+        _check_action(domain.name, action, seen_actions, known)
     _check_rules(domain.name, domain.rules)
 
 
-def _check_action(domain_name: str, action: Action, seen: set[str]) -> None:
+def _check_servers(domain: Domain, declared: dict[str, str]) -> None:
+    seen: set[str] = set()
+    for server in domain.servers:
+        where = f"server {domain.name}.{server.name}"
+        if _NAME.fullmatch(server.name) is None:
+            raise RegistryError(f"{where}: not a valid name")
+        if server.name in seen:
+            raise RegistryError(f"{where}: declared twice")
+        seen.add(server.name)
+        earlier = declared.get(server.name)
+        if earlier is not None:
+            raise RegistryError(f"{where}: also declared by {earlier}")
+        declared[server.name] = domain.name
+        for number, name in enumerate(server.env, start=1):
+            if _ENV_NAME.fullmatch(name) is None or name.startswith("CONDUCTOR_"):
+                raise RegistryError(f"{where}: environment name {number} is not valid")
+
+
+def _check_action(domain_name: str, action: Action, seen: set[str], servers: set[str]) -> None:
     where = f"action {domain_name}.{action.name}"
     if _NAME.fullmatch(action.name) is None:
         raise RegistryError(f"{where}: not a valid name")
@@ -131,6 +161,12 @@ def _check_action(domain_name: str, action: Action, seen: set[str]) -> None:
         raise RegistryError(f"{where}: result must be a Contract")
     if action.effect == "implement" and action.kind != "agent":
         raise RegistryError(f"{where}: implement needs an agent action")
+    if action.server is not None and action.server not in servers:
+        raise RegistryError(f"{where}: no server {action.server} in this domain")
+    if action.kind == "tool" and action.server is None and servers:
+        raise RegistryError(f"{where}: a tool action of a domain with servers names one")
+    if action.kind != "tool" and action.server is not None:
+        raise RegistryError(f"{where}: only a tool action names a server")
 
 
 def _check_rules(domain_name: str, rules: tuple[Rule, ...]) -> None:

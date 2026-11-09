@@ -136,3 +136,12 @@ The coding agent appends one entry per phase, in the form `docs/phase-convention
   - None
 - Follow-ups:
   - The working tree also has edits this phase did not make: docs/phases/phase-05e-run-commands.md, docs/verification/phase-05e-run-commands.md, docs/reviews/phase-05e-run-commands.md, and .claude/skills/phase-architect/SKILL.md.
+
+## Phase 6a: MCP servers and the client (2026-11-09)
+- Tests: 564 -> 600 (given 24)
+- New public names: `registry`: `McpServer`, `Action.server`, `Domain.servers`; `config`: `MCP_TIMEOUT_MESSAGE`, `MCP_COMMAND_MESSAGE`, `MCP_NAME_MESSAGE`, `MCP_MAPPING_MESSAGE`, `Settings.mcp_timeout`, `Settings.mcp`, `Settings.mcp_timeout_seconds`, `Settings.mcp_command`; `mcp_client.client`: `UnavailableCode`, `McpUnavailable`, `ToolInfo`, `ToolOutcome`, `McpClient`, `client_for`
+- Changed files: 12
+- Deviations:
+  - None
+- Follow-ups:
+  - None
