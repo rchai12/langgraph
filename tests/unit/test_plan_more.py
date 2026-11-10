@@ -1,5 +1,5 @@
 from dataclasses import replace
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 
 import pytest
@@ -37,7 +37,10 @@ def ask(content: str, log: EventLog, request: str = "Echo hello") -> Planned | E
     )
 
 
-def test_fields_list_every_action_and_the_union_keeps_declaration_order() -> None:
+def test_fields_list_every_action_and_the_union_keeps_declaration_order(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(clock, "today", lambda: date(2026, 11, 10))
     assert plan_fields(demo.DOMAIN) == {
         "domain": "demo",
         "description": "A domain for tests: echo text, write a note, delegate a task.",
@@ -46,6 +49,8 @@ def test_fields_list_every_action_and_the_union_keeps_declaration_order() -> Non
             "- note: Write a note with a title, a body, and tags.\n"
             "- delegate: Hand a task to the demo agent."
         ),
+        "today": "2026-11-10",
+        "weekday": "Tuesday",
     }
     note, echo = demo.DOMAIN.actions[1], demo.DOMAIN.actions[0]
     domain = replace(demo.DOMAIN, actions=(note, echo))

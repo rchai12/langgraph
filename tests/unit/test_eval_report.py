@@ -105,7 +105,7 @@ def test_a_report_holds_the_numbers_and_the_fingerprint(tmp_path: Path) -> None:
         model="test-model:1b",
         digests=[SCRIPTED_INFO.digest],
         templates={
-            "plan": [load_template("plan.v1").sha256],
+            "plan": [load_template("plan.v2").sha256],
             "route": [load_template("route.v1").sha256],
         },
         case_files={"demo.toml": hashlib.sha256(b"# synthetic cases\n").hexdigest()},

@@ -105,7 +105,7 @@ def test_the_answer_point_and_its_prompt() -> None:
         AnswerInputs,
         AnswerOutput,
     )
-    assert (point.think, point.max_reply_tokens) == (True, 2048)
+    assert (point.think, point.max_reply_tokens, point.context_tokens) == (True, 6144, 16384)
     request = build_request(
         point, AnswerInputs(request=REQUEST, results=RESULTS), model=MODEL, fields={}
     )

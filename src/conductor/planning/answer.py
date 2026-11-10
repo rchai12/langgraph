@@ -14,7 +14,9 @@ from conductor.routing.route import REQUEST_MESSAGE
 
 RESULTS_MESSAGE = "an answer needs 1 to 8 step results"
 BLANK_MESSAGE = "the reply is blank"
-ANSWER_REPLY_TOKENS = 2048
+ANSWER_REPLY_TOKENS = 6144
+ANSWER_CONTEXT_TOKENS = 16384
+ANSWER_INPUT_BYTES = 24_000
 
 
 class StepOutcome(Contract):
@@ -46,6 +48,7 @@ ANSWER_POINT = DecisionPoint(
     output=AnswerOutput,
     think=True,
     max_reply_tokens=ANSWER_REPLY_TOKENS,
+    context_tokens=ANSWER_CONTEXT_TOKENS,
 )
 
 
@@ -68,10 +71,20 @@ def answer_request(
         raise ValueError(REQUEST_MESSAGE)
     if len(results) < 1 or len(results) > MAX_STEPS:
         raise ValueError(RESULTS_MESSAGE)
+    inputs = AnswerInputs(request=request, results=tuple(results))
+    size = len(inputs.model_dump_json(indent=2).encode("utf-8"))
+    if size > ANSWER_INPUT_BYTES:
+        return Escalation(
+            kind="answer_too_large",
+            detail=(
+                f"the step results are {size} bytes, more than {ANSWER_INPUT_BYTES}; ask for less"
+            ),
+            run_id=run_id,
+        )
     try:
         decision = decide(
             ANSWER_POINT,
-            AnswerInputs(request=request, results=tuple(results)),
+            inputs,
             fields={},
             model=model,
             model_name=model_name,

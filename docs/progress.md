@@ -199,3 +199,12 @@ The coding agent appends one entry per phase, in the form `docs/phase-convention
   - None
 - Follow-ups:
   - None
+
+## Phase 9a: today in the planner, and a bounded answer (2026-11-10)
+- Tests: 827 -> 859 (given 28)
+- New public names: `clock`: `today`; `llm.points`: `MIN_CONTEXT_TOKENS`, `MAX_CONTEXT_TOKENS`, `DecisionPoint.context_tokens`; `planning.answer`: `ANSWER_CONTEXT_TOKENS`, `ANSWER_INPUT_BYTES`
+- Changed files: 18
+- Deviations:
+  - None
+- Follow-ups:
+  - None

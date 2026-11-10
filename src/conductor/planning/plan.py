@@ -3,7 +3,7 @@ from typing import Annotated, Literal, Union
 
 from pydantic import Field, create_model
 
-from conductor import plancheck
+from conductor import clock, plancheck
 from conductor.contracts import MAX_STEPS, Contract, Escalation, Plan, Step
 from conductor.events import EventLog
 from conductor.llm.decide import InvalidModelOutput, decide, escalation_for
@@ -52,7 +52,7 @@ def plan_output(domain: Domain) -> type[Contract]:
 def plan_point(domain: Domain) -> DecisionPoint:
     return DecisionPoint(
         name="plan",
-        template="plan.v1",
+        template="plan.v2",
         inputs=PlanInputs,
         output=plan_output(domain),
         think=True,
@@ -60,12 +60,18 @@ def plan_point(domain: Domain) -> DecisionPoint:
     )
 
 
+_WEEKDAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+
+
 def plan_fields(domain: Domain) -> dict[str, str]:
+    day = clock.today()
     lines = [f"- {action.name}: {action.description}" for action in domain.actions]
     return {
         "domain": domain.name,
         "description": domain.description,
         "actions": "\n".join(lines),
+        "today": day.isoformat(),
+        "weekday": _WEEKDAYS[day.weekday()],
     }
 
 

@@ -77,7 +77,7 @@ def test_the_first_run_saves_a_report(
     report = Report.from_json(saved.read_bytes())
     assert [case.id for case in report.cases] == ["say-hi", "weather"]
     assert (report.runs, report.created, report.digests) == (2, FIRST, ["0" * 64])
-    assert report.templates == {"plan": [load_template("plan.v1").sha256]}
+    assert report.templates == {"plan": [load_template("plan.v2").sha256]}
     assert report.case_files == {"demo.toml": hashlib.sha256(CASES.encode()).hexdigest()}
 
 
