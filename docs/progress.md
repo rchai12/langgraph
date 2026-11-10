@@ -190,3 +190,12 @@ The coding agent appends one entry per phase, in the form `docs/phase-convention
   - None
 - Follow-ups:
   - None
+
+## Phase 8b: saved and compared evaluation reports (2026-11-10)
+- Tests: 788 -> 827 (given 31)
+- New public names: `evals.report`: `CaseNumbers`, `Report`, `ReportError`, `build_report`, `save_report`, `latest_report`, `compare_lines`; `evals.run`: `CaseResult.run_ids`
+- Changed files: 8
+- Deviations:
+  - None
+- Follow-ups:
+  - None

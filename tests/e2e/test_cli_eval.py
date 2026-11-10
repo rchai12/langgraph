@@ -51,7 +51,7 @@ def test_eval_run_prints_a_line_per_case_and_overall(cases: Path, model: list) -
     )
     result = run("eval", "run", "--cases", cases, "--runs", "2")
     assert (result.exit_code, result.stderr) == (0, "")
-    assert result.stdout.splitlines() == [
+    assert result.stdout.splitlines()[:3] == [
         "say-hi  consistent 2/2  route 2/2  plan 2/2  args 2/2  valid 2/2  escalated 0/2"
         "  p50 1.00s  p95 1.00s",
         "weather  consistent 2/2  route 2/2  plan 2/2  args -  valid 2/2  escalated 2/2"

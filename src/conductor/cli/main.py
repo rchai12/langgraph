@@ -15,6 +15,13 @@ from conductor.decisions import answer_escalation, decide_approval, parse_json_o
 from conductor.diagnostics import run_checks, summary_line
 from conductor.evals import run as evals_run
 from conductor.evals.cases import CaseFileError, load_cases
+from conductor.evals.report import (
+    ReportError,
+    build_report,
+    compare_lines,
+    latest_report,
+    save_report,
+)
 from conductor.events import EventLog, EventLogCorrupt, RunNotFound
 from conductor.graph.supervisor import RunError, RunState
 from conductor.mcp_client.check import ToolCheckFailed
@@ -477,6 +484,11 @@ def eval_run(
             loaded.extend(load_cases(path, registry, seen=seen))
         except CaseFileError as error:
             _bail(str(error))
+    reports = settings.data_dir / "evals" / "reports"
+    try:
+        previous = latest_report(reports)
+    except ReportError as error:
+        _bail(str(error))
     model = evals_run.model_for(settings)
     log = EventLog(settings.data_dir / "evals" / "runs")
     results = []
@@ -492,3 +504,9 @@ def eval_run(
         typer.echo(evals_run.case_line(result))
         results.append(result)
     typer.echo(evals_run.overall_line(tuple(results)))
+    current = build_report(results, files=files, model_name=settings.model, runs=runs, log=log)
+    typer.echo(f"report {save_report(current, reports).name}")
+    if previous is not None:
+        typer.echo(f"previous {previous[0]}")
+        for line in compare_lines(previous[1], current):
+            typer.echo(line)

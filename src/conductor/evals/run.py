@@ -2,7 +2,7 @@ import json
 import math
 from collections import Counter
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from conductor import ids
 from conductor.config import Settings
@@ -32,6 +32,7 @@ class CaseResult:
     escalated: int
     unavailable: int
     seconds: tuple[float, ...]
+    run_ids: tuple[str, ...] = field(default=(), compare=False)
 
 
 def model_for(settings: Settings) -> Model:
@@ -53,8 +54,10 @@ def run_case(
     route_ok = plan_ok = valid = escalated = unavailable = 0
     args_ok: int | None = 0 if case.args is not None else None
     taken: list[float] = []
+    run_ids: list[str] = []
     for _ in range(runs):
         run_id = ids.new_id()
+        run_ids.append(run_id)
         routed = route_request(
             case.request,
             registry,
@@ -102,6 +105,7 @@ def run_case(
         escalated,
         unavailable,
         tuple(taken),
+        tuple(run_ids),
     )
 
 
