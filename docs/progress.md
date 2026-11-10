@@ -181,3 +181,12 @@ The coding agent appends one entry per phase, in the form `docs/phase-convention
   - None
 - Follow-ups:
   - None
+
+## Phase 8a: running evaluation cases (2026-11-10)
+- Tests: 744 -> 788 (given 32)
+- New public names: `evals.cases`: `EvalCase`, `CaseFileError`, `load_cases`; `evals.run`: `MAX_RUNS`, `RUNS_MESSAGE`, `CaseResult`, `model_for`, `run_case`, `case_line`, `overall_line`; `cli.main`: `eval_run`
+- Changed files: 11
+- Deviations:
+  - None
+- Follow-ups:
+  - None

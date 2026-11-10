@@ -11,11 +11,13 @@
 {% for form in forms %}
 <form method="post" action="{{ form.action }}">
 <input type="hidden" name="token" value="{{ token }}">
-<textarea name="note"></textarea>
+<label for="note-{{ form.verb }}">Note</label>
+<textarea id="note-{{ form.verb }}" name="note"></textarea>
 {% if form.args is not none %}
-<textarea name="args">{{ form.args }}</textarea>
+<label for="args-edit">Arguments (JSON)</label>
+<textarea id="args-edit" name="args">{{ form.args }}</textarea>
 {% endif %}
-<button type="submit">Submit</button>
+<button type="submit">{{ form.button }}</button>
 </form>
 {% endfor %}
 </body>

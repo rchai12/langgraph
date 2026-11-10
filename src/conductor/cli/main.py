@@ -3,20 +3,23 @@ import json
 import socket
 from collections.abc import Callable
 from datetime import datetime
+from pathlib import Path
 from typing import Annotated, Any, NoReturn
 
 import typer
 import uvicorn
 
-from conductor import runtime
+from conductor import domains, runtime
 from conductor.config import Settings, SettingsError, get_settings
 from conductor.decisions import answer_escalation, decide_approval, parse_json_object
 from conductor.diagnostics import run_checks, summary_line
+from conductor.evals import run as evals_run
+from conductor.evals.cases import CaseFileError, load_cases
 from conductor.events import EventLog, EventLogCorrupt, RunNotFound
 from conductor.graph.supervisor import RunError, RunState
 from conductor.mcp_client.check import ToolCheckFailed
 from conductor.policy import DecisionRefused
-from conductor.registry import NotRegistered
+from conductor.registry import NotRegistered, Registry
 from conductor.store import (
     AlreadyDecided,
     NotFound,
@@ -30,7 +33,9 @@ from conductor.web.app import create_app
 
 app = typer.Typer(no_args_is_help=True, add_completion=False)
 runs_app = typer.Typer(no_args_is_help=True, add_completion=False)
+eval_app = typer.Typer(no_args_is_help=True, add_completion=False)
 app.add_typer(runs_app, name="runs")
+app.add_typer(eval_app, name="eval")
 
 _STORED_AT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
@@ -445,3 +450,45 @@ def web() -> None:
         proxy_headers=False,
         log_level="warning",
     )
+
+
+def _case_files(given: str) -> list[Path]:
+    path = Path(given)
+    names = [path] if path.is_file() else sorted(path.glob("*.toml"))
+    return [item for item in names if item.suffix == ".toml"]
+
+
+@eval_app.command("run")
+def eval_run(
+    cases: Annotated[str, typer.Option("--cases")] = "evals/cases",
+    runs: Annotated[int, typer.Option("--runs")] = 5,
+) -> None:
+    if not 1 <= runs <= evals_run.MAX_RUNS:
+        _bail("--runs must be 1 to 100")
+    files = _case_files(cases)
+    if not files:
+        _bail(f"no case files at {cases}")
+    settings = _settings()
+    registry = Registry(domains.registered(settings))
+    seen: set[str] = set()
+    loaded = []
+    for path in files:
+        try:
+            loaded.extend(load_cases(path, registry, seen=seen))
+        except CaseFileError as error:
+            _bail(str(error))
+    model = evals_run.model_for(settings)
+    log = EventLog(settings.data_dir / "evals" / "runs")
+    results = []
+    for case in loaded:
+        result = evals_run.run_case(
+            case,
+            registry,
+            model=model,
+            model_name=settings.model,
+            log=log,
+            runs=runs,
+        )
+        typer.echo(evals_run.case_line(result))
+        results.append(result)
+    typer.echo(evals_run.overall_line(tuple(results)))

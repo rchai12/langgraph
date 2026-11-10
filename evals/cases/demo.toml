@@ -1,0 +1,32 @@
+# Evaluation cases for the demo domain. Synthetic requests only (AGENTS.md rule 5).
+# Run with CONDUCTOR_DEMO=true: .venv/bin/conductor eval run
+
+[[case]]
+id = "repeat-hello"
+request = "Please repeat after me: hello there"
+route = "demo"
+plan = ["echo"]
+args = [{ text = "hello there" }]
+
+[[case]]
+id = "note-milk"
+request = "Write down that we need milk"
+route = "demo"
+plan = ["note"]
+
+[[case]]
+id = "echo-then-note"
+request = "Echo the word ready, then write a note titled Ready"
+route = "demo"
+plan = ["echo", "note"]
+
+[[case]]
+id = "no-action-fits"
+request = "demo: book a table for two at eight"
+route = "demo"
+plan = "escalate"
+
+[[case]]
+id = "no-domain-fits"
+request = "What is the weather in Lisbon tomorrow?"
+route = "escalate"

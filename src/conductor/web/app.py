@@ -137,6 +137,20 @@ def _home(store: Store, request: Request, templates: Jinja2Templates) -> Respons
     )
 
 
+_BUTTONS = {
+    "approve": "Approve",
+    "reject": "Reject",
+    "edit": "Edit and approve",
+    "retry": "Retry",
+    "cancel": "Cancel",
+}
+
+
+def _form(action: str, args: str | None = None) -> dict[str, str | None]:
+    verb = action.rsplit("/", 1)[-1]
+    return {"action": action, "args": args, "verb": verb, "button": _BUTTONS[verb]}
+
+
 def _detail(
     lines: tuple[str, ...],
     forms: list[dict[str, str | None]],
@@ -279,13 +293,13 @@ def create_app(settings: Settings, *, resumer: Resumer | None = None) -> ASGIApp
             forms: list[dict[str, str | None]] = []
             if stored.decision is None:
                 base = f"/approvals/{approval_id}"
-                forms.append({"action": f"{base}/approve", "args": None})
-                forms.append({"action": f"{base}/reject", "args": None})
+                forms.append(_form(f"{base}/approve"))
+                forms.append(_form(f"{base}/reject"))
                 if stored.request.stage == "step":
                     rendered = json.dumps(
                         stored.request.steps[0].args, ensure_ascii=False, sort_keys=True
                     )
-                    forms.append({"action": f"{base}/edit", "args": rendered})
+                    forms.append(_form(f"{base}/edit", rendered))
             return _detail(request_lines(stored), forms, request, templates)
 
         return _with_store(settings, read)
@@ -300,8 +314,8 @@ def create_app(settings: Settings, *, resumer: Resumer | None = None) -> ASGIApp
             forms: list[dict[str, str | None]] = []
             if stored.answer is None:
                 base = f"/escalations/{escalation_id}"
-                forms.append({"action": f"{base}/retry", "args": None})
-                forms.append({"action": f"{base}/cancel", "args": None})
+                forms.append(_form(f"{base}/retry"))
+                forms.append(_form(f"{base}/cancel"))
             return _detail(escalation_lines(stored), forms, request, templates)
 
         return _with_store(settings, read)
