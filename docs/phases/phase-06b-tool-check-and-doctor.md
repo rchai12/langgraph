@@ -1,5 +1,9 @@
 # Phase 6b: the tool check and the doctor
 
+## Corrections (2026-11-09, after the first attempt)
+
+The first attempt stopped on a mistake in this spec, not in the code: in `tests/unit/test_tool_check.py`, the case for `field limit is not in the tool's input` rebuilt the tool's properties with `start` as a plain string, so the check rightly also reported `field start has types null|string, the tool's string`. The corrected file below keeps `start` as the tool declares it. The code already written stays: replace the given file, then run Acceptance and write the progress entry.
+
 ## Goal
 
 Before any run can use a tool, code checks that the tool is what the domain says it is:
@@ -287,7 +291,10 @@ def test_a_registry_without_servers_starts_nothing() -> None:
                     SPENDING,
                     input_schema={
                         **SPENDING.input_schema,
-                        "properties": {"month": {"type": "string"}, "start": {"type": "string"}},
+                        "properties": {
+                            "month": {"type": "string"},
+                            "start": SPENDING.input_schema["properties"]["start"],
+                        },
                     },
                 ),
                 WRITE_NOTE,

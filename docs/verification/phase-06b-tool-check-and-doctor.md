@@ -4,6 +4,8 @@ Spec: `docs/phases/phase-06b-tool-check-and-doctor.md`. Follow `docs/phase-conve
 
 The coder created `conductor.mcp_client.check` (critical), added `domains.registered`, `runtime.check_tools` and the check before `ask` and `resume`, the printing of a failed check in the commands, and the server lines of `conductor doctor`, copied two test files (26 tests), and wrote two of their own.
 
+The first attempt stopped on a mistake in one given test case (see the spec's "Corrections"); verify the phase in full against the corrected file.
+
 ## 1. Gates
 
 N is `600`. Sections: cli, core.

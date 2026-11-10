@@ -10,7 +10,6 @@ from langgraph.graph.state import CompiledStateGraph
 from conductor import domains, ids
 from conductor.config import Settings
 from conductor.contracts import Contract
-from conductor.domains import demo
 from conductor.events import EventLog, JsonValue
 from conductor.graph.supervisor import (
     RunError,
@@ -24,6 +23,7 @@ from conductor.graph.supervisor import (
 )
 from conductor.llm.model import Model, ModelInfo, ModelReply
 from conductor.llm.ollama import OllamaModel
+from conductor.mcp_client.check import ToolCheckFailed, check_registry
 from conductor.registry import Action, Registry
 from conductor.store import LeaseHeld, LeaseLost, Store
 
@@ -49,6 +49,11 @@ class _Focus:
     run_id: str = ""
 
 
+@dataclass
+class _Checked:
+    done: bool = False
+
+
 @dataclass(frozen=True)
 class Runtime:
     graph: CompiledStateGraph
@@ -57,6 +62,8 @@ class Runtime:
     registry: Registry
     holder: str
     focus: _Focus
+    settings: Settings
+    checked: _Checked
 
 
 class _LeasedModel:
@@ -103,13 +110,11 @@ def open_runtime(settings: Settings, *, model: Model | None = None) -> Iterator[
         saver = SqliteSaver(connection)
         store = Store(settings.db_path)
         log = EventLog(settings.runs_dir)
-        registered = domains.DOMAINS
         if settings.demo_on:
-            registered = (*registered, demo.DOMAIN)
             runner: DemoRunner | NoRunner = DemoRunner()
         else:
             runner = NoRunner()
-        registry = Registry(registered)
+        registry = Registry(domains.registered(settings))
         chosen = model
         if chosen is None:
             chosen = OllamaModel(settings.ollama_host, timeout=settings.model_timeout_seconds)
@@ -126,18 +131,29 @@ def open_runtime(settings: Settings, *, model: Model | None = None) -> Iterator[
             ),
             saver,
         )
-        yield Runtime(graph, store, log, registry, holder, focus)
+        yield Runtime(graph, store, log, registry, holder, focus, settings, _Checked())
     finally:
         connection.close()
 
 
+def check_tools(runtime: Runtime) -> None:
+    if runtime.checked.done:
+        return
+    problems = check_registry(runtime.registry, runtime.settings)
+    if problems:
+        raise ToolCheckFailed(problems)
+    runtime.checked.done = True
+
+
 def ask(runtime: Runtime, request: str) -> RunState:
+    check_tools(runtime)
     run_id = ids.new_id()
     runtime.store.acquire(run_id, runtime.holder)
     return _call(runtime, run_id, lambda: start_run(runtime.graph, request, run_id=run_id))
 
 
 def resume(runtime: Runtime, run_id: str) -> RunState:
+    check_tools(runtime)
     try:
         runtime.store.acquire(run_id, runtime.holder)
     except LeaseHeld:

@@ -3,8 +3,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
+from conductor import domains
 from conductor.config import Settings
 from conductor.llm import tags
+from conductor.mcp_client.check import ServerCheck, check_servers
+from conductor.registry import Registry
 
 MIN_PYTHON = (3, 12)
 
@@ -78,7 +81,33 @@ def run_checks(settings: Settings) -> list[Check]:
         check_python(),
         check_data_folder(settings.data_dir),
         *check_ollama(settings.ollama_host, settings.model),
+        *server_lines(settings),
     ]
+
+
+def server_lines(settings: Settings) -> list[Check]:
+    found = check_servers(Registry(domains.registered(settings)), settings)
+    lines: list[Check] = []
+    for item in found:
+        lines.extend(_server_lines(item))
+    return lines
+
+
+def _server_lines(item: ServerCheck) -> list[Check]:
+    name = f"server {item.server}"
+    if item.tools is None:
+        return [Check("FAIL", name, item.problems[0].message)]
+    if item.problems:
+        return [Check("FAIL", name, problem.text) for problem in item.problems]
+    tools = _count(item.tools, "tool", "tools")
+    actions = _count(item.actions, "action", "actions")
+    detail = f"{tools}, {actions} checked"
+    return [Check("ok", name, detail)]
+
+
+def _count(count: int, singular: str, plural: str) -> str:
+    word = singular if count == 1 else plural
+    return f"{count} {word}"
 
 
 def summary_line(checks: list[Check]) -> str:

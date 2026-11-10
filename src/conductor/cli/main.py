@@ -12,6 +12,7 @@ from conductor.decisions import answer_escalation, decide_approval
 from conductor.diagnostics import run_checks, summary_line
 from conductor.events import EventLog, EventLogCorrupt, RunNotFound
 from conductor.graph.supervisor import RunError, RunState
+from conductor.mcp_client.check import ToolCheckFailed
 from conductor.policy import DecisionRefused
 from conductor.registry import NotRegistered
 from conductor.store import (
@@ -101,6 +102,9 @@ def _report(error: BaseException) -> NoReturn:
     if isinstance(error, DecisionRefused):
         for problem in error.problems:
             typer.echo(f"  {problem.loc}: {problem.code}", err=True)
+    if isinstance(error, ToolCheckFailed):
+        for problem in error.problems:
+            typer.echo(f"  {problem.text}", err=True)
     raise typer.Exit(1)
 
 
@@ -117,7 +121,7 @@ def _session(work: Callable[[Settings, runtime.Runtime], None]) -> None:
     try:
         with runtime.open_runtime(settings) as opened:
             work(settings, opened)
-    except (*_CAUGHT, RunError) as error:
+    except (*_CAUGHT, RunError, ToolCheckFailed) as error:
         _report(error)
 
 

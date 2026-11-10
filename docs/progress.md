@@ -145,3 +145,12 @@ The coding agent appends one entry per phase, in the form `docs/phase-convention
   - None
 - Follow-ups:
   - None
+
+## Phase 6b: the tool check and the doctor (2026-11-09)
+- Tests: 600 -> 641 (given 26)
+- New public names: `mcp_client.check`: `CHECK_FAILED_MESSAGE`, `CheckProblem`, `ServerCheck`, `ToolCheckFailed`, `json_types`, `check_servers`, `check_registry`; `domains`: `registered`; `runtime`: `check_tools`; `diagnostics`: `server_lines`
+- Changed files: 15
+- Deviations:
+  - None
+- Follow-ups:
+  - The working tree also has edits this phase did not make: .claude/skills/phase-architect/SKILL.md, docs/phases/phase-06b-tool-check-and-doctor.md, and docs/verification/phase-06b-tool-check-and-doctor.md.
