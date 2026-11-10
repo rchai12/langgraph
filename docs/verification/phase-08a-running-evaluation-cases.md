@@ -4,6 +4,8 @@ Spec: `docs/phases/phase-08a-running-evaluation-cases.md`. Follow `docs/phase-co
 
 The coder created `conductor.evals.cases` and `conductor.evals.run`, added `conductor eval run`, labelled the approvals page's buttons and fields, copied the given case file and four test files (32 tests), and wrote `tests/unit/test_eval_more.py`.
 
+The first verification failed on spot-check row 5 of this guide, which could not fail as written: with `runs` 0 the loop runs no times, so a check after it still raises (corrected 2026-11-10 to the `101` case; the architect ran the corrected change against the committed code and that case failed). The code is unchanged: verify the phase in full again and write a new report over the old one.
+
 ## 1. Gates
 
 N is `744`. Sections: cli, core.
@@ -279,7 +281,7 @@ Spot checks: make each change in the named function, run the deciding test, see 
 | 2 | for a `route = "escalate"` case, the plan counted right only when a plan exists (`run_case`) | `test_a_case_that_expects_escalations`, `weather` | `plan_ok` `1` | `0` |
 | 3 | a run's seconds summed over every `MODEL_REPLY` event of the log, not only its own run id | `test_runs_that_disagree` | `(2.0, 4.0, 0.5, 3.0)` | larger, growing values |
 | 4 | the percentile taken at position `ceil(q × n)` counted from 0 (no minus one) | `test_runs_that_disagree` | `p50 2.00s` | `p50 3.00s` (or an `IndexError` at p95: record which) |
-| 5 | `runs` checked after the runs (`run_case`) | `test_runs_are_1_to_100`, `0` | `ValueError: runs must be 1 to 100` | another result or error |
+| 5 | `runs` checked after the runs (`run_case`) | `test_runs_are_1_to_100`, `101` (select it with `-k 101`) | `ValueError: runs must be 1 to 100` | `ScriptError: no scripted reply left for route` |
 | 6 | the command builds `OllamaModel` itself instead of calling `run.model_for` | `test_eval_run_prints_a_line_per_case_and_overall` | the pinned lines | `escalated` runs from the closed port |
 | 7 | the edit button labelled `Edit` | `test_each_approval_form_says_what_it_does`, `step` | `Edit and approve` | `Edit` |
 | 8 | the route problem's message includes the request (`load_cases`) | `test_a_problem_never_quotes_the_request` | no `SYNTHETIC-SECRET` | it appears |

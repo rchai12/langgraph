@@ -167,7 +167,7 @@ Both appear in the terminal (`conductor approvals ...`) and on the approvals pag
 - **consistency**: the share of runs equal to the most common output;
 - the escalation rate, and latency at the median and 95th percentile.
 
-Each report records the model digests and prompt hashes, and compares with the previous report, so a change in variance can be traced to a prompt or model change.
+Each `eval run` saves a report as JSON under `data/evals/reports/`, named by its UTC time (Phase 8b): every case's numbers and run ids, plus a fingerprint (the model name, the digests and template hashes its runs' `MODEL_REQUEST` events logged, and each case file's SHA-256). It then compares with the latest earlier report: what changed in the fingerprint, each case whose shares moved (as shares, so a different K still compares), and the cases added or removed. Latency is recorded, not compared; the exit code is 0 whatever the comparison shows (decided 2026-11-10). An unreadable previous report stops the evaluation before any run.
 
 ## Package layout (planned)
 
