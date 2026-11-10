@@ -2,7 +2,7 @@
 
 Each phase is one coding session for a capable coding agent and ends with every check green. From Phase 2 on, a spec is about half the size of Phase 1 (about 10 requirements and 30 given tests), so most rows below become two or more lettered sub-phases (`2a`, `2b`, ...); numbers are never reused or renumbered. Specs are written one or two phases ahead, from the code that exists.
 
-Status (2026-11-10): Phases 1 to 7 are built and verified (744 tests). Phase 8a (running evaluation cases) is built (788 tests) and awaits its second verification, after a spot-check row of the guide was corrected. Phase 8b (saved and compared reports) is specified.
+Status (2026-11-10): Phases 1 to 8 are built (827 tests). Phase 8b is verified; Phase 8a's second verification passed (827 tests, no findings).
 
 **Build order:** 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11; 12 and 13 when wanted.
 
