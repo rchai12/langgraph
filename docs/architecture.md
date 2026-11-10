@@ -160,7 +160,7 @@ Both appear in the terminal (`conductor approvals ...`) and on the approvals pag
 
 ## Evaluation harness
 
-`conductor eval run` (not part of `scripts/check.py`, since it needs the real model) reads a set of cases (a request plus the expected route, the expected actions in order, chosen arguments, or "must escalate"), runs each K times (default 5), and reports per case and overall:
+`conductor eval run` (not part of `scripts/check.py`, since it needs the real model; Phase 8a) runs the route and plan decision points only, never the graph or a step, so an evaluation cannot cause a side effect (decided 2026-11-09). It reads a set of cases from TOML files under `evals/cases/`, committed and synthetic, (a request plus the expected route, the expected actions in order, chosen arguments, or "must escalate"), runs each K times (default 5), and reports per case and overall:
 
 - the share of replies that validated;
 - route and plan accuracy against the expected values;
