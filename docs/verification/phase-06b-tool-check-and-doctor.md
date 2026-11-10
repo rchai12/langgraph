@@ -4,7 +4,7 @@ Spec: `docs/phases/phase-06b-tool-check-and-doctor.md`. Follow `docs/phase-conve
 
 The coder created `conductor.mcp_client.check` (critical), added `domains.registered`, `runtime.check_tools` and the check before `ask` and `resume`, the printing of a failed check in the commands, and the server lines of `conductor doctor`, copied two test files (26 tests), and wrote two of their own.
 
-The first attempt stopped on a mistake in one given test case (see the spec's "Corrections"); verify the phase in full against the corrected file.
+The first attempt stopped on a mistake in one given test case (see the spec's "Corrections"). The first verification then failed on three spot-check rows of this guide that could not fail as written (rows 1, 2, and 5, corrected 2026-11-09; the architect ran each corrected change against the committed code and the named test failed). The code is unchanged: verify the phase in full again and write a new report over the old one.
 
 ## 1. Gates
 
@@ -230,11 +230,11 @@ Spot checks: make each change in the named function, run the deciding test, see 
 
 | # | Change (function) | Deciding test, input | Correct | Broken |
 |---|---|---|---|---|
-| 1 | `read_only is not False` instead of `is True` (rule 5) | `test_what_the_check_refuses`, `read_only=None` | the read-only problem | no problem |
-| 2 | the read-only rule applied to every effect | `test_a_write_action_may_use_a_read_only_tool`, or a `write` action on `read_only=False` in `test_a_domain_that_fits_its_server` | no problem | a read-only problem |
+| 1 | rule 5 refuses only `read_only is False` (so a tool with no hint passes) | `test_what_the_check_refuses`, `read_only=None` | the read-only problem | no problem |
+| 2 | the read-only rule applied to every effect (the `effect == "read"` condition removed) | `test_a_domain_that_fits_its_server` (its `note` action is `write`, on a tool marked `False`) | no problem | a read-only problem for `finance.note` |
 | 3 | `anyOf` members ignored in `json_types` | `test_the_json_types_of_a_field`, the date-or-null case | `("null", "string")` | `("any",)` |
 | 4 | rule 4 (the tool's required fields) removed | `test_what_the_check_refuses`, `by` | the requires problem | no problem |
-| 5 | an open output schema refused (rules 7 to 9 run on no properties as if empty and `R` required) | `test_a_domain_that_fits_its_server` (`Open` has no required field) and the coder's open-schema test | no problem | a problem (record which) |
+| 5 | rules 7 to 9 run on an output schema without `properties` as if it listed none | the coder's `test_an_output_schema_without_properties_passes` (its result requires `note_id`) | no problem | `the tool does not promise result field note_id` |
 | 6 | `check_tools` not called in `resume` | `test_a_server_without_a_command_line_refuses_a_resume` | `ToolCheckFailed` | `RunError` |
 | 7 | the check moved into `open_runtime` | `test_recording_without_resuming_skips_the_check` | `Rejected` | exit 1 |
 | 8 | each `FAIL` line not counted (`diagnostics`) | `test_the_doctor_checks_each_server` | `1 check failed.` | `All checks passed.` |
