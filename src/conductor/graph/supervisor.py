@@ -38,10 +38,32 @@ RESUMABLE_STOPS = ("route", "plan", "answer")
 RunStatus = Literal["waiting", "done", "rejected", "cancelled", "stopped"]
 STEP_FAILED_DETAIL = "the step failed"
 RESULT_DETAIL = "the result does not fit the action"
+FAILURE_CODES = (
+    "tool_error",
+    "no_command",
+    "start_failed",
+    "timeout",
+    "closed",
+    "no_result",
+    "too_large",
+)
+FailureCode = Literal[
+    "tool_error",
+    "no_command",
+    "start_failed",
+    "timeout",
+    "closed",
+    "no_result",
+    "too_large",
+]
 
 
 class StepFailed(Exception):
     """A runner raises it when a step could not be done; its text is never shown."""
+
+    def __init__(self, *args: object, code: FailureCode | None = None) -> None:
+        self.code: FailureCode | None = code if code in FAILURE_CODES else None
+        super().__init__(*args)
 
 
 class StepRunner(Protocol):
@@ -368,8 +390,11 @@ def _run_step(services: Services):
         )
         try:
             output = services.runner.run(action, args)
-        except StepFailed:
-            return _tool_error(services, run_id, step.number, full_name, STEP_FAILED_DETAIL, ())
+        except StepFailed as error:
+            detail = STEP_FAILED_DETAIL
+            if error.code is not None:
+                detail = f"{STEP_FAILED_DETAIL} ({error.code})"
+            return _tool_error(services, run_id, step.number, full_name, detail, ())
         try:
             parsed = action.result.from_json(json.dumps(output))
         except ValidationError as error:

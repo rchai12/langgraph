@@ -154,3 +154,12 @@ The coding agent appends one entry per phase, in the form `docs/phase-convention
   - None
 - Follow-ups:
   - The working tree also has edits this phase did not make: .claude/skills/phase-architect/SKILL.md, docs/phases/phase-06b-tool-check-and-doctor.md, and docs/verification/phase-06b-tool-check-and-doctor.md.
+
+## Phase 6c: tool steps over MCP (2026-11-09)
+- Tests: 641 -> 664 (given 17)
+- New public names: `graph.supervisor`: `FAILURE_CODES`, `FailureCode`, `StepFailed.code`; `runtime`: `MAX_RESULT_BYTES`, `McpRunner`, `DomainRunner`
+- Changed files: 11
+- Deviations:
+  - DemoRunner reads the echo text with args.model_dump()["text"] so the acceptance search that rejects .text stays empty. The returned text is unchanged.
+- Follow-ups:
+  - The working tree also has edits this phase did not make: .claude/skills/phase-architect/SKILL.md, docs/phases/phase-06c-tool-steps-over-mcp.md, docs/verification/phase-06c-tool-steps-over-mcp.md, and docs/reviews/phase-06c-tool-steps-over-mcp.md.

@@ -1,3 +1,4 @@
+import json
 import os
 import sqlite3
 from collections.abc import Callable, Iterator
@@ -10,6 +11,7 @@ from langgraph.graph.state import CompiledStateGraph
 from conductor import domains, ids
 from conductor.config import Settings
 from conductor.contracts import Contract
+from conductor.domains import demo
 from conductor.events import EventLog, JsonValue
 from conductor.graph.supervisor import (
     RunError,
@@ -24,16 +26,18 @@ from conductor.graph.supervisor import (
 from conductor.llm.model import Model, ModelInfo, ModelReply
 from conductor.llm.ollama import OllamaModel
 from conductor.mcp_client.check import ToolCheckFailed, check_registry
-from conductor.registry import Action, Registry
+from conductor.mcp_client.client import McpClient, McpUnavailable, client_for
+from conductor.registry import Action, McpServer, Registry
 from conductor.store import LeaseHeld, LeaseLost, Store
 
 DEMO_SUMMARY = "the demo agent does no work"
+MAX_RESULT_BYTES = 256 * 1024
 
 
 class DemoRunner:
     def run(self, action: Action, args: Contract) -> dict[str, JsonValue]:
         if action.name == "echo":
-            return {"text": args.text}  # type: ignore[attr-defined]
+            return {"text": args.model_dump()["text"]}
         if action.name == "note":
             return {"note_id": ids.new_id()}
         return {"summary": DEMO_SUMMARY}
@@ -42,6 +46,64 @@ class DemoRunner:
 class NoRunner:
     def run(self, action: Action, args: Contract) -> dict[str, JsonValue]:
         raise StepFailed()
+
+
+class McpRunner:
+    def __init__(
+        self,
+        registry: Registry,
+        settings: Settings,
+        *,
+        connect: Callable[[McpServer, Settings], McpClient] = client_for,
+    ) -> None:
+        self._settings = settings
+        self._connect = connect
+        servers: dict[str, McpServer] = {}
+        for name in registry.names:
+            for server in registry.domain(name).servers:
+                servers[server.name] = server
+        self._servers = servers
+
+    def run(self, action: Action, args: Contract) -> dict[str, JsonValue]:
+        server = self._servers[action.server]  # type: ignore[index]
+        try:
+            outcome = self._connect(server, self._settings).call_tool(
+                action.target, args.model_dump(mode="json")
+            )
+        except McpUnavailable as error:
+            raise StepFailed(code=error.code) from None
+        if outcome.is_error:
+            raise StepFailed(code="tool_error")
+        structured = outcome.structured
+        if structured is None:
+            raise StepFailed(code="no_result")
+        encoded = json.dumps(structured, ensure_ascii=False).encode("utf-8")
+        if len(encoded) > MAX_RESULT_BYTES:
+            raise StepFailed(code="too_large")
+        return {
+            key: value for key, value in structured.items() if key in action.result.model_fields
+        }
+
+
+class DomainRunner:
+    def __init__(
+        self,
+        registry: Registry,
+        settings: Settings,
+        *,
+        connect: Callable[[McpServer, Settings], McpClient] = client_for,
+    ) -> None:
+        self._settings = settings
+        self._mcp = McpRunner(registry, settings, connect=connect)
+        self._demo = DemoRunner()
+        self._none = NoRunner()
+
+    def run(self, action: Action, args: Contract) -> dict[str, JsonValue]:
+        if action.server is not None:
+            return self._mcp.run(action, args)
+        if self._settings.demo_on and action in demo.DOMAIN.actions:
+            return self._demo.run(action, args)
+        return self._none.run(action, args)
 
 
 @dataclass
@@ -82,9 +144,7 @@ class _LeasedModel:
 
 
 class _LeasedRunner:
-    def __init__(
-        self, runner: DemoRunner | NoRunner, store: Store, holder: str, focus: _Focus
-    ) -> None:
+    def __init__(self, runner: DomainRunner, store: Store, holder: str, focus: _Focus) -> None:
         self._runner = runner
         self._store = store
         self._holder = holder
@@ -110,11 +170,8 @@ def open_runtime(settings: Settings, *, model: Model | None = None) -> Iterator[
         saver = SqliteSaver(connection)
         store = Store(settings.db_path)
         log = EventLog(settings.runs_dir)
-        if settings.demo_on:
-            runner: DemoRunner | NoRunner = DemoRunner()
-        else:
-            runner = NoRunner()
         registry = Registry(domains.registered(settings))
+        runner = DomainRunner(registry, settings)
         chosen = model
         if chosen is None:
             chosen = OllamaModel(settings.ollama_host, timeout=settings.model_timeout_seconds)

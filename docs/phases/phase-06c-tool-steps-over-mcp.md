@@ -1,5 +1,9 @@
 # Phase 6c: tool steps over MCP
 
+## Corrections (2026-11-09, after the first verification)
+
+The first attempt failed on a mistake in this spec, not in the code: `tests/integration/test_mcp_steps.py` called `model_dump_json()` on a `StoredEscalation`, a dataclass, instead of on the `Escalation` it holds. The corrected file below calls `.escalation.model_dump_json()`; nothing else changes. The code already written stays: replace the given file, then run Acceptance and write the progress entry.
+
 ## Goal
 
 The last part of Phase 6: a tool action's step now runs on its MCP server.
@@ -359,7 +363,7 @@ def test_a_tool_error_escalates_with_its_code() -> None:
         assert detail(runtime, failed) == "step 1 lab.fail: the step failed (tool_error)"
         assert (
             "SYNTHETIC-SECRET"
-            not in runtime.store.escalation(failed.escalation_id).model_dump_json()
+            not in runtime.store.escalation(failed.escalation_id).escalation.model_dump_json()
         )
 
 

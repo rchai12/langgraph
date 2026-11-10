@@ -4,6 +4,8 @@ Spec: `docs/phases/phase-06c-tool-steps-over-mcp.md`. Follow `docs/phase-convent
 
 The coder added `FAILURE_CODES` and `StepFailed`'s code to `conductor.graph.supervisor`, `MAX_RESULT_BYTES`, `McpRunner`, and `DomainRunner` to `conductor.runtime`, copied two test files (17 tests), and wrote two of their own.
 
+The first verification failed on a mistake in one given test line (see the spec's "Corrections"); the code is unchanged. Verify the phase in full against the corrected file and write a new report over the old one.
+
 ## 1. Gates
 
 N is `641`. Sections: core.
