@@ -61,7 +61,7 @@ Built in Phase 5c (`graph/supervisor.py`, critical) with these rules, from a spi
 
 ### Plan
 
-A decision point (`plan`, `planning/plan.py`, critical; Phase 5b) whose output becomes a `Plan`: an ordered list of up to 8 steps, each one of the chosen domain's actions with that action's own argument schema (a union discriminated by the action's name, decided 2026-11-09), so Ollama's grammar holds every argument to its contract (it cuts and bends values to fit, silently; the approval shows the exact arguments). The planner may answer with no steps, which escalates as `invalid_plan`: no action fits. Code names each step `<domain>.<action>`, fills the argument defaults, and runs plan checking again. Steps run in order. A step does not read another step's output through the model. When an agent action needs earlier results, code passes them in its `TaskSpec.context`.
+A decision point (`plan`, `planning/plan.py`, critical; Phase 5b) whose output becomes a `Plan`: an ordered list of up to 8 steps, each one of the chosen domain's actions with that action's own argument schema (a union discriminated by the action's name, decided 2026-11-09), so Ollama's grammar holds every argument to its contract (it cuts and bends values to fit, silently; the approval shows the exact arguments). The planner may answer with no steps, which escalates as `invalid_plan`: no action fits. Code names each step `<domain>.<action>`, fills the argument defaults, and runs plan checking again. The plan prompt (`plan.v2`, Phase 9a) names today's date and weekday, the machine's local day of `clock.now()`, so the planner can write real dates for "last month". Steps run in order. A step does not read another step's output through the model. When an agent action needs earlier results, code passes them in its `TaskSpec.context`.
 
 ### Check plan (code)
 
@@ -117,13 +117,15 @@ The registry checks at start-up that names are unique, every tool action's MCP t
 The only code that talks to Ollama, and only on 127.0.0.1. `decide(point, inputs) -> validated output`:
 
 1. Renders the decision point's prompt template (a file `conductor/prompts/<name>.v<N>.md`, its SHA-256 recorded): the system message is the template with code-made fields, then the output schema; the user message is the point's typed inputs as JSON (Phase 3a).
-2. Calls Ollama with the schema as `format` and fixed options: temperature 0, seed 7, `num_ctx` 8192, and the point's reply cap as `num_predict`. Thinking is on by default (the owner's decision, 2026-10-27, so the reasoning is logged); it is sent only when `/api/tags` lists the `thinking` capability for the model, since Ollama refuses `think` for a model without it, and the setting actually used is logged.
+2. Calls Ollama with the schema as `format` and fixed options: temperature 0, seed 7, the point's context size as `num_ctx` (8192 by default, 8192 to 32768; the answer point 16384, Phase 9a), and the point's reply cap as `num_predict`. Thinking is on by default (the owner's decision, 2026-10-27, so the reasoning is logged); it is sent only when `/api/tags` lists the `thinking` capability for the model, since Ollama refuses `think` for a model without it, and the setting actually used is logged.
 3. Logs the request, the raw reply, the reasoning, the model digest (from `/api/tags`, read before every call so the digest logged is the one installed then; chat replies carry none), and timings. The wait for a reply is `CONDUCTOR_MODEL_TIMEOUT` (whole seconds, default 300); `keep_alive` is not sent, so Ollama's own default applies (decided 2026-11-08).
 4. Validates the reply: `done_reason` must be `stop` (a reply cut by the cap is truncated JSON), then the output contract's strict `from_json`. On failure it raises an invalid-output error, which the graph turns into an escalation. There is no retry inside `decide()`: when Ollama is down, times out, or answers with an HTTP error, it raises a model-unavailable error, the run escalates, and the person retries it once Ollama is back (the owner's decision, 2026-10-27). `escalation_for(error, run_id)` turns either error into an `Escalation` (Phase 3c). A point that asks for thinking on a model without the capability runs without it, and the request event records `think_requested` and `think` (decided 2026-11-08).
 
 A `ScriptedModel` with the same interface returns recorded replies in order, each naming the decision point it answers (a reply for another point is an error), for tests and for replaying a logged run.
 
 Prompts are structured: a fixed system section (role, rules, the closed set of answers), the inputs in labelled blocks, and the output schema. Rendered prompts are pinned by tests so that a prompt change is always deliberate.
+
+The answer point's message (the request and every step result as JSON) is bounded at 24000 UTF-8 bytes, about 8000 tokens on the owner's model; past it the run escalates as `answer_too_large` without asking the model (Phase 9a). Each finance action also bounds its own arguments and result fields (Phase 9b).
 
 ## State, threads, and storage
 
