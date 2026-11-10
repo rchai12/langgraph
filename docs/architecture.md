@@ -31,7 +31,7 @@ The systems the agent reaches are out of scope. This project builds the framewor
 | Tools | `mcp` Python SDK 2.x as a client, stdio transport | The same SDK the `finances` server uses |
 | Contracts | `pydantic` 2, `pydantic-settings` 2 | |
 | Commands | `typer` | |
-| Approvals page | FastAPI on 127.0.0.1 (Phase 7) | No scripts from a CDN; the same hardening as `finances`' web UI |
+| Approvals page | FastAPI 0.162 and Jinja2 3.1 on 127.0.0.1 (Phase 7) | The same hardening as `finances`' web UI: a host check (`127.0.0.1:<port>` and `localhost:<port>` only), security headers on every answer with `script-src 'none'`, autoescaped templates, no login (this Mac only, decided 2026-11-09); `CONDUCTOR_WEB_PORT` default 8766, since `finances` uses 8765 |
 | Tests / lint | `pytest`, `pytest-cov`, `ruff` | |
 
 Versions found on 2026-10-25 in a scratch environment: langgraph 1.2.17, langgraph-checkpoint 4.3.0, langgraph-checkpoint-sqlite 3.1.2, mcp 2.3.0, pydantic 2.14.1, pydantic-settings 2.16.1, typer 0.27.3 (click 8.5.0), pytest 9.1.1, pytest-cov 7.1.0, ruff 0.17.2. Each phase adds only the dependencies it needs, with bounds.
