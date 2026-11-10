@@ -16,6 +16,7 @@ MCP_TIMEOUT_MESSAGE = "must be whole seconds from 1 to 600"
 MCP_COMMAND_MESSAGE = "must be a command line"
 MCP_NAME_MESSAGE = "not a server name"
 MCP_MAPPING_MESSAGE = "must map server names to command lines"
+WEB_PORT_MESSAGE = "must be a port from 1024 to 65535"
 
 _SERVER_NAME = re.compile(r"^[a-z][a-z0-9_]{0,31}$")
 
@@ -34,6 +35,7 @@ class Settings(BaseSettings):
     decided_by: str = "owner"
     demo: str = "false"
     mcp_timeout: str = "60"
+    web_port: str = "8766"
     mcp: dict[str, str] = {}
 
     @property
@@ -59,6 +61,10 @@ class Settings(BaseSettings):
     @property
     def mcp_timeout_seconds(self) -> int:
         return int(self.mcp_timeout)
+
+    @property
+    def web_port_number(self) -> int:
+        return int(self.web_port)
 
     def mcp_command(self, name: str) -> tuple[str, ...] | None:
         line = self.mcp.get(name)
@@ -93,6 +99,11 @@ def get_settings() -> Settings:
         or int(settings.mcp_timeout) > 600
     ):
         problems.append(f"CONDUCTOR_MCP_TIMEOUT: {MCP_TIMEOUT_MESSAGE}")
+    if (
+        re.fullmatch(r"^[1-9][0-9]{3,4}$", settings.web_port) is None
+        or int(settings.web_port) > 65535
+    ):
+        problems.append(f"CONDUCTOR_WEB_PORT: {WEB_PORT_MESSAGE}")
     for key in sorted(settings.mcp):
         label = f"CONDUCTOR_MCP__{key.upper()}"
         if _SERVER_NAME.fullmatch(key) is None:

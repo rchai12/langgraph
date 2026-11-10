@@ -42,6 +42,7 @@ A bug here lets the agent act without approval, lose its record, or accept outpu
 - `runtime.py` (one process per thread at a time, and private checkpoint files; Phase 5d)
 - `mcp_client/client.py` (what a tool server receives, and every way it can fail; Phase 6a)
 - `mcp_client/check.py` (a tool action runs only on the tool it says, and a `read` action only on a read-only tool; Phase 6b)
+- `web/app.py` (only this machine is answered, and nothing it shows can run as markup; Phase 7a)
 
 ## Commands
 

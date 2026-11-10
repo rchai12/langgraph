@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Approvals</title>
+</head>
+<body>
+<h1>Pending approvals</h1>
+{% if approvals %}
+<ul>
+{% for item in approvals %}
+<li><a href="/approvals/{{ item.approval_id }}">{{ item.approval_id }}</a> {{ item.when }} {{ item.stage }} {{ item.actions }}</li>
+{% endfor %}
+</ul>
+{% else %}
+<p>No pending approvals.</p>
+{% endif %}
+<h1>Open escalations</h1>
+{% if escalations %}
+<ul>
+{% for item in escalations %}
+<li><a href="/escalations/{{ item.escalation_id }}">{{ item.escalation_id }}</a> {{ item.when }} {{ item.kind }} run {{ item.run_id }}</li>
+{% endfor %}
+</ul>
+{% else %}
+<p>No open escalations.</p>
+{% endif %}
+</body>
+</html>

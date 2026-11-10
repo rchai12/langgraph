@@ -1,10 +1,12 @@
 import dataclasses
 import json
+import socket
 from collections.abc import Callable
 from datetime import datetime
 from typing import Annotated, Any, NoReturn
 
 import typer
+import uvicorn
 
 from conductor import runtime
 from conductor.config import Settings, SettingsError, get_settings
@@ -23,6 +25,8 @@ from conductor.store import (
     StoredEscalation,
     StoreError,
 )
+from conductor.views import escalation_lines, request_lines
+from conductor.web.app import create_app
 
 app = typer.Typer(no_args_is_help=True, add_completion=False)
 runs_app = typer.Typer(no_args_is_help=True, add_completion=False)
@@ -157,52 +161,10 @@ def _allow(yes: bool, prompt: str, preview: str) -> bool:
     return typer.confirm(prompt, default=False)
 
 
-def _request_block(stored: StoredApproval) -> str:
-    request = stored.request
-    decision = stored.decision
-    if decision is None:
-        status = "pending"
-    else:
-        word = {"approve": "approved", "reject": "rejected", "edit": "edited"}[decision.verdict]
-        when = _when(decision.decided_at)
-        status = f"{word} by {decision.decided_by} ({decision.channel}) at {when}"
-    lines = [
-        f"approval {request.approval_id}  {request.stage}  {status}",
-        f"run {request.run_id}  requested {_when(request.requested_at)}",
-    ]
-    for step in request.steps:
-        lines.append(f"  {step.number}. {step.action}  {step.effect}  {_args(step.args)}")
-    if decision is not None and decision.verdict == "edit":
-        lines.append(f"edited args: {_args(decision.edited_args)}")
-    if decision is not None and decision.note:
-        lines.append(f"note: {decision.note}")
-    return "\n".join(lines)
-
-
 def _approval_json(stored: StoredApproval) -> dict[str, object]:
     decision = stored.decision
     dumped = None if decision is None else decision.model_dump(mode="json")
     return {"request": stored.request.model_dump(mode="json"), "decision": dumped}
-
-
-def _escalation_block(stored: StoredEscalation) -> str:
-    escalation = stored.escalation
-    answer = stored.answer
-    if answer is None:
-        status = "open"
-    else:
-        when = _when(answer.answered_at)
-        status = f"{answer.answer} by {answer.decided_by} ({answer.channel}) at {when}"
-    lines = [
-        f"escalation {stored.escalation_id}  {escalation.kind}  {status}",
-        f"run {escalation.run_id}  raised {_when(stored.raised_at)}",
-        escalation.detail,
-    ]
-    for problem in escalation.problems:
-        lines.append(f"  {problem.loc}: {problem.code}")
-    if answer is not None and answer.note:
-        lines.append(f"note: {answer.note}")
-    return "\n".join(lines)
 
 
 def _escalation_json(stored: StoredEscalation) -> dict[str, object]:
@@ -218,13 +180,13 @@ def _escalation_json(stored: StoredEscalation) -> dict[str, object]:
 
 def _state_text(opened: runtime.Runtime, found: RunState) -> str:
     if found.status == "waiting" and found.approval_id is not None:
-        block = _request_block(opened.store.approval(found.approval_id))
+        block = "\n".join(request_lines(opened.store.approval(found.approval_id)))
         return (
             f"{block}\nNext: conductor approvals approve {found.approval_id}"
             " (or reject, or edit --args)"
         )
     if found.status == "waiting" and found.escalation_id is not None:
-        block = _escalation_block(opened.store.escalation(found.escalation_id))
+        block = "\n".join(escalation_lines(opened.store.escalation(found.escalation_id)))
         return f"{block}\nNext: conductor escalations retry {found.escalation_id} (or cancel)"
     if found.status == "done":
         return f"run {found.run_id}  done\n{found.reply}"
@@ -286,7 +248,7 @@ def show_approval(
         if json_output:
             _dump(_approval_json(stored))
             return
-        typer.echo(_request_block(stored))
+        typer.echo("\n".join(request_lines(stored)))
 
     _run(work)
 
@@ -316,7 +278,7 @@ def approve(
 ) -> None:
     def work(settings: Settings, opened: runtime.Runtime) -> None:
         stored = opened.store.approval(approval_id)
-        if _stopped(yes, "Approve?", _request_block(stored)):
+        if _stopped(yes, "Approve?", "\n".join(request_lines(stored))):
             return
         decide_approval(
             opened.store,
@@ -366,7 +328,7 @@ def edit(
 
     def work(settings: Settings, opened: runtime.Runtime) -> None:
         stored = opened.store.approval(approval_id)
-        preview = f"{_request_block(stored)}\nedited args: {_args(edited)}"
+        preview = "\n".join(request_lines(stored)) + f"\nedited args: {_args(edited)}"
         if _stopped(yes, "Approve with these arguments?", preview):
             return
         decide_approval(
@@ -417,7 +379,7 @@ def show_escalation(
         if json_output:
             _dump(_escalation_json(stored))
             return
-        typer.echo(_escalation_block(stored))
+        typer.echo("\n".join(escalation_lines(stored)))
 
     _run(work)
 
@@ -431,7 +393,7 @@ def retry(
 ) -> None:
     def work(settings: Settings, opened: runtime.Runtime) -> None:
         stored = opened.store.escalation(escalation_id)
-        if _stopped(yes, "Retry?", _escalation_block(stored)):
+        if _stopped(yes, "Retry?", "\n".join(escalation_lines(stored))):
             return
         answer_escalation(
             opened.store,
@@ -467,3 +429,25 @@ def cancel(
         _recorded(opened, stored.escalation.run_id, f"Cancelled {escalation_id}.", no_resume)
 
     _session(work)
+
+
+@app.command()
+def web() -> None:
+    settings = _settings()
+    port = settings.web_port_number
+    probe = socket.socket()
+    try:
+        probe.bind(("127.0.0.1", port))
+    except OSError:
+        _bail(f"port {port} is taken")
+    finally:
+        probe.close()
+    typer.echo(f"Serving on http://127.0.0.1:{port}/")
+    uvicorn.run(
+        create_app(settings),
+        host="127.0.0.1",
+        port=port,
+        server_header=False,
+        proxy_headers=False,
+        log_level="warning",
+    )

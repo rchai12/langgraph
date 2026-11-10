@@ -163,3 +163,12 @@ The coding agent appends one entry per phase, in the form `docs/phase-convention
   - DemoRunner reads the echo text with args.model_dump()["text"] so the acceptance search that rejects .text stays empty. The returned text is unchanged.
 - Follow-ups:
   - The working tree also has edits this phase did not make: .claude/skills/phase-architect/SKILL.md, docs/phases/phase-06c-tool-steps-over-mcp.md, docs/verification/phase-06c-tool-steps-over-mcp.md, and docs/reviews/phase-06c-tool-steps-over-mcp.md.
+
+## Phase 7a: the approvals page, read-only (2026-11-09)
+- Tests: 664 -> 704 (given 26)
+- New public names: `config`: `WEB_PORT_MESSAGE`, `Settings.web_port`, `Settings.web_port_number`; `views`: `request_lines`, `escalation_lines`; `web.app`: `SECURITY_HEADERS`, `create_app`; `cli.main`: `web`
+- Changed files: 12
+- Deviations:
+  - None
+- Follow-ups:
+  - None

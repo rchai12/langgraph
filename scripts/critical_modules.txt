@@ -16,3 +16,4 @@ graph/supervisor.py
 runtime.py
 mcp_client/client.py
 mcp_client/check.py
+web/app.py
