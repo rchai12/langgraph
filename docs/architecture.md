@@ -82,7 +82,7 @@ Each action exists in the routed domain; each step's arguments validate against 
 
 ### Run a step
 
-- A **tool action** maps one-to-one to an MCP tool on one of its domain's servers. Code calls it with the validated arguments and validates the result against the action's result schema. No model is involved.
+- A **tool action** maps one-to-one to an MCP tool on one of its domain's servers. Code calls it with the validated arguments and validates the result against the action's result schema. No model is involved. From Phase 6c, `McpRunner` (in `conductor.runtime`) makes the call through the 6a client, keeps only the top-level result fields the action's contract names, refuses a result over 256 KB, and turns every failure into `StepFailed` with a cause code (`tool_error`, `no_command`, `start_failed`, `timeout`, `closed`, `no_result`, `too_large`) that the escalation names; a `timeout` or `closed` during a write leaves its outcome unknown, so the person checks before the retry approves it again (decided 2026-11-09).
 - An **agent action** hands a `TaskSpec` to a subagent (a LangGraph subgraph, or an adapter around an external agent such as the coder) and gets back a `TaskResult`. A subagent sees only its domain's tools.
 
 ### Answer
