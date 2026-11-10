@@ -1,3 +1,4 @@
+import json
 from typing import Any
 
 from conductor import clock
@@ -72,3 +73,16 @@ def answer_escalation(
 def _check_note(note: str) -> None:
     if len(note) > 500:
         raise ValueError(NOTE_MESSAGE)
+
+
+def parse_json_object(text: str) -> dict[str, Any] | None:
+    def reject(_constant: str) -> None:
+        raise ValueError
+
+    try:
+        parsed = json.loads(text, parse_constant=reject)
+    except (json.JSONDecodeError, ValueError):
+        return None
+    if not isinstance(parsed, dict):
+        return None
+    return parsed

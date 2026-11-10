@@ -8,5 +8,15 @@
 <p><a href="/">Home</a></p>
 <pre>{% for line in lines %}{{ line }}
 {% endfor %}</pre>
+{% for form in forms %}
+<form method="post" action="{{ form.action }}">
+<input type="hidden" name="token" value="{{ token }}">
+<textarea name="note"></textarea>
+{% if form.args is not none %}
+<textarea name="args">{{ form.args }}</textarea>
+{% endif %}
+<button type="submit">Submit</button>
+</form>
+{% endfor %}
 </body>
 </html>

@@ -172,3 +172,12 @@ The coding agent appends one entry per phase, in the form `docs/phase-convention
   - None
 - Follow-ups:
   - None
+
+## Phase 7b: deciding on the page (2026-11-09)
+- Tests: 704 -> 744 (given 30)
+- New public names: `decisions`: `parse_json_object`; `web.app`: `FORM_COOKIE`; `web.jobs`: `Resumer`
+- Changed files: 14
+- Deviations:
+  - None
+- Follow-ups:
+  - None

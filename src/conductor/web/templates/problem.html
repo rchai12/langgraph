@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Problem</title>
+</head>
+<body>
+<p>{{ message }}</p>
+{% for problem in problems %}
+<p>{{ problem.loc }}: {{ problem.code }}</p>
+{% endfor %}
+<p><a href="{{ back }}">Back</a></p>
+</body>
+</html>

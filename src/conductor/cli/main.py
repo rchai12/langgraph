@@ -10,7 +10,7 @@ import uvicorn
 
 from conductor import runtime
 from conductor.config import Settings, SettingsError, get_settings
-from conductor.decisions import answer_escalation, decide_approval
+from conductor.decisions import answer_escalation, decide_approval, parse_json_object
 from conductor.diagnostics import run_checks, summary_line
 from conductor.events import EventLog, EventLogCorrupt, RunNotFound
 from conductor.graph.supervisor import RunError, RunState
@@ -142,14 +142,8 @@ def _dump(value: object) -> None:
 
 
 def _json_object(text: str) -> dict[str, Any]:
-    def reject(_constant: str) -> None:
-        raise ValueError
-
-    try:
-        parsed = json.loads(text, parse_constant=reject)
-    except (json.JSONDecodeError, ValueError):
-        _bail("--args must be a JSON object")
-    if not isinstance(parsed, dict):
+    parsed = parse_json_object(text)
+    if parsed is None:
         _bail("--args must be a JSON object")
     return parsed
 

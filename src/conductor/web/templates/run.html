@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Run</title>
+{% if busy %}
+<meta http-equiv="refresh" content="5">
+{% endif %}
+</head>
+<body>
+{% if busy %}
+<p>busy</p>
+{% endif %}
+{% if status == "waiting" and approval_id %}
+<p>waiting</p>
+<p><a href="/approvals/{{ approval_id }}">{{ approval_id }}</a></p>
+{% elif status == "waiting" and escalation_id %}
+<p>waiting</p>
+<p><a href="/escalations/{{ escalation_id }}">{{ escalation_id }}</a></p>
+{% elif status == "done" %}
+<p>done</p>
+<p>{{ reply }}</p>
+{% elif status == "rejected" %}
+<p>rejected</p>
+<p>{{ note }}</p>
+{% elif status == "cancelled" %}
+<p>cancelled</p>
+{% elif status == "stopped" %}
+<p>stopped</p>
+<p>{{ stopped_at }}</p>
+{% endif %}
+{% if error %}
+<p>The last resume failed: {{ error }}</p>
+{% endif %}
+</body>
+</html>

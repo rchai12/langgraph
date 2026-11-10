@@ -43,6 +43,7 @@ A bug here lets the agent act without approval, lose its record, or accept outpu
 - `mcp_client/client.py` (what a tool server receives, and every way it can fail; Phase 6a)
 - `mcp_client/check.py` (a tool action runs only on the tool it says, and a `read` action only on a read-only tool; Phase 6b)
 - `web/app.py` (only this machine is answered, and nothing it shows can run as markup; Phase 7a)
+- `web/jobs.py` (a run resumed from the page runs under its lease, and its failure is kept, not lost; Phase 7b)
 
 ## Commands
 
