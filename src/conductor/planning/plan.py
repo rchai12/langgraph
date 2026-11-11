@@ -15,6 +15,7 @@ from conductor.routing.route import Routed
 
 NO_FIT_MESSAGE = "no registered action fits the request"
 PLAN_REPLY_TOKENS = 4096
+PLAN_CONTEXT_TOKENS = 16384
 
 
 class PlanInputs(Contract):
@@ -57,6 +58,7 @@ def plan_point(domain: Domain) -> DecisionPoint:
         output=plan_output(domain),
         think=True,
         max_reply_tokens=PLAN_REPLY_TOKENS,
+        context_tokens=PLAN_CONTEXT_TOKENS,
     )
 
 

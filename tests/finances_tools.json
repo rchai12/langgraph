@@ -1,0 +1,517 @@
+{
+  "list_accounts": {
+    "input_schema": {
+      "properties": {
+        "include_inactive": {
+          "default": false,
+          "title": "Include Inactive",
+          "type": "boolean"
+        }
+      },
+      "type": "object",
+      "title": "list_accountsArguments"
+    },
+    "output_schema": {
+      "type": "object",
+      "additionalProperties": true,
+      "title": "list_accountsDictOutput"
+    },
+    "read_only": true
+  },
+  "get_balances": {
+    "input_schema": {
+      "properties": {},
+      "type": "object",
+      "title": "get_balancesArguments"
+    },
+    "output_schema": {
+      "type": "object",
+      "additionalProperties": true,
+      "title": "get_balancesDictOutput"
+    },
+    "read_only": true
+  },
+  "get_net_worth": {
+    "input_schema": {
+      "properties": {
+        "months": {
+          "default": 12,
+          "maximum": 60,
+          "minimum": 1,
+          "title": "Months",
+          "type": "integer"
+        }
+      },
+      "type": "object",
+      "title": "get_net_worthArguments"
+    },
+    "output_schema": {
+      "type": "object",
+      "additionalProperties": true,
+      "title": "get_net_worthDictOutput"
+    },
+    "read_only": true
+  },
+  "list_transactions": {
+    "input_schema": {
+      "properties": {
+        "text": {
+          "default": "",
+          "title": "Text",
+          "type": "string"
+        },
+        "account": {
+          "default": "",
+          "title": "Account",
+          "type": "string"
+        },
+        "person": {
+          "default": "",
+          "title": "Person",
+          "type": "string"
+        },
+        "category": {
+          "default": "",
+          "title": "Category",
+          "type": "string"
+        },
+        "group": {
+          "default": "",
+          "title": "Group",
+          "type": "string"
+        },
+        "merchant": {
+          "default": "",
+          "title": "Merchant",
+          "type": "string"
+        },
+        "bank": {
+          "default": "",
+          "title": "Bank",
+          "type": "string"
+        },
+        "card": {
+          "default": "",
+          "title": "Card",
+          "type": "string"
+        },
+        "kind": {
+          "default": "",
+          "title": "Kind",
+          "type": "string"
+        },
+        "start": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Start"
+        },
+        "end": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "End"
+        },
+        "limit": {
+          "default": 50,
+          "maximum": 200,
+          "minimum": 1,
+          "title": "Limit",
+          "type": "integer"
+        },
+        "offset": {
+          "default": 0,
+          "maximum": 5000,
+          "minimum": 0,
+          "title": "Offset",
+          "type": "integer"
+        }
+      },
+      "type": "object",
+      "title": "list_transactionsArguments"
+    },
+    "output_schema": {
+      "type": "object",
+      "additionalProperties": true,
+      "title": "list_transactionsDictOutput"
+    },
+    "read_only": true
+  },
+  "get_spending": {
+    "input_schema": {
+      "properties": {
+        "start": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Start"
+        },
+        "end": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "End"
+        },
+        "by": {
+          "default": "category",
+          "enum": [
+            "category",
+            "group",
+            "merchant",
+            "person",
+            "account",
+            "bank",
+            "card"
+          ],
+          "title": "By",
+          "type": "string"
+        }
+      },
+      "type": "object",
+      "title": "get_spendingArguments"
+    },
+    "output_schema": {
+      "type": "object",
+      "additionalProperties": true,
+      "title": "get_spendingDictOutput"
+    },
+    "read_only": true
+  },
+  "month_over_month": {
+    "input_schema": {
+      "properties": {
+        "month": {
+          "default": "",
+          "title": "Month",
+          "type": "string"
+        },
+        "count": {
+          "default": 6,
+          "maximum": 24,
+          "minimum": 1,
+          "title": "Count",
+          "type": "integer"
+        }
+      },
+      "type": "object",
+      "title": "month_over_monthArguments"
+    },
+    "output_schema": {
+      "type": "object",
+      "additionalProperties": true,
+      "title": "month_over_monthDictOutput"
+    },
+    "read_only": true
+  },
+  "get_insights": {
+    "input_schema": {
+      "properties": {
+        "month": {
+          "default": "",
+          "title": "Month",
+          "type": "string"
+        }
+      },
+      "type": "object",
+      "title": "get_insightsArguments"
+    },
+    "output_schema": {
+      "type": "object",
+      "additionalProperties": true,
+      "title": "get_insightsDictOutput"
+    },
+    "read_only": true
+  },
+  "get_recurring": {
+    "input_schema": {
+      "properties": {
+        "income": {
+          "default": false,
+          "title": "Income",
+          "type": "boolean"
+        },
+        "include_inactive": {
+          "default": false,
+          "title": "Include Inactive",
+          "type": "boolean"
+        }
+      },
+      "type": "object",
+      "title": "get_recurringArguments"
+    },
+    "output_schema": {
+      "type": "object",
+      "additionalProperties": true,
+      "title": "get_recurringDictOutput"
+    },
+    "read_only": true
+  },
+  "get_upcoming": {
+    "input_schema": {
+      "properties": {
+        "days": {
+          "default": 30,
+          "maximum": 90,
+          "minimum": 1,
+          "title": "Days",
+          "type": "integer"
+        }
+      },
+      "type": "object",
+      "title": "get_upcomingArguments"
+    },
+    "output_schema": {
+      "type": "object",
+      "additionalProperties": true,
+      "title": "get_upcomingDictOutput"
+    },
+    "read_only": true
+  },
+  "get_forecast": {
+    "input_schema": {
+      "properties": {
+        "days": {
+          "default": 30,
+          "maximum": 90,
+          "minimum": 1,
+          "title": "Days",
+          "type": "integer"
+        },
+        "account": {
+          "default": "",
+          "title": "Account",
+          "type": "string"
+        }
+      },
+      "type": "object",
+      "title": "get_forecastArguments"
+    },
+    "output_schema": {
+      "type": "object",
+      "additionalProperties": true,
+      "title": "get_forecastDictOutput"
+    },
+    "read_only": true
+  },
+  "get_budgets": {
+    "input_schema": {
+      "properties": {
+        "month": {
+          "default": "",
+          "title": "Month",
+          "type": "string"
+        }
+      },
+      "type": "object",
+      "title": "get_budgetsArguments"
+    },
+    "output_schema": {
+      "type": "object",
+      "additionalProperties": true,
+      "title": "get_budgetsDictOutput"
+    },
+    "read_only": true
+  },
+  "list_uncategorized": {
+    "input_schema": {
+      "properties": {
+        "limit": {
+          "default": 50,
+          "maximum": 500,
+          "minimum": 1,
+          "title": "Limit",
+          "type": "integer"
+        }
+      },
+      "type": "object",
+      "title": "list_uncategorizedArguments"
+    },
+    "output_schema": {
+      "type": "object",
+      "additionalProperties": true,
+      "title": "list_uncategorizedDictOutput"
+    },
+    "read_only": true
+  },
+  "list_categories": {
+    "input_schema": {
+      "properties": {},
+      "type": "object",
+      "title": "list_categoriesArguments"
+    },
+    "output_schema": {
+      "type": "object",
+      "additionalProperties": true,
+      "title": "list_categoriesDictOutput"
+    },
+    "read_only": true
+  },
+  "list_rules": {
+    "input_schema": {
+      "properties": {},
+      "type": "object",
+      "title": "list_rulesArguments"
+    },
+    "output_schema": {
+      "type": "object",
+      "additionalProperties": true,
+      "title": "list_rulesDictOutput"
+    },
+    "read_only": true
+  },
+  "list_transfers": {
+    "input_schema": {
+      "properties": {
+        "limit": {
+          "default": 100,
+          "maximum": 500,
+          "minimum": 1,
+          "title": "Limit",
+          "type": "integer"
+        }
+      },
+      "type": "object",
+      "title": "list_transfersArguments"
+    },
+    "output_schema": {
+      "type": "object",
+      "additionalProperties": true,
+      "title": "list_transfersDictOutput"
+    },
+    "read_only": true
+  },
+  "list_transfer_suggestions": {
+    "input_schema": {
+      "properties": {},
+      "type": "object",
+      "title": "list_transfer_suggestionsArguments"
+    },
+    "output_schema": {
+      "type": "object",
+      "additionalProperties": true,
+      "title": "list_transfer_suggestionsDictOutput"
+    },
+    "read_only": true
+  },
+  "data_coverage": {
+    "input_schema": {
+      "properties": {},
+      "type": "object",
+      "title": "data_coverageArguments"
+    },
+    "output_schema": {
+      "type": "object",
+      "additionalProperties": true,
+      "title": "data_coverageDictOutput"
+    },
+    "read_only": true
+  },
+  "find_merchants": {
+    "input_schema": {
+      "properties": {
+        "phrase": {
+          "title": "Phrase",
+          "type": "string"
+        },
+        "limit": {
+          "default": 5,
+          "maximum": 20,
+          "minimum": 1,
+          "title": "Limit",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "phrase"
+      ],
+      "type": "object",
+      "title": "find_merchantsArguments"
+    },
+    "output_schema": {
+      "type": "object",
+      "additionalProperties": true,
+      "title": "find_merchantsDictOutput"
+    },
+    "read_only": true
+  },
+  "list_proposals": {
+    "input_schema": {
+      "properties": {
+        "status": {
+          "default": "open",
+          "enum": [
+            "open",
+            "accepted",
+            "declined"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "limit": {
+          "default": 50,
+          "maximum": 200,
+          "minimum": 1,
+          "title": "Limit",
+          "type": "integer"
+        }
+      },
+      "type": "object",
+      "title": "list_proposalsArguments"
+    },
+    "output_schema": {
+      "type": "object",
+      "additionalProperties": true,
+      "title": "list_proposalsDictOutput"
+    },
+    "read_only": true
+  },
+  "list_advice": {
+    "input_schema": {
+      "properties": {
+        "limit": {
+          "default": 20,
+          "maximum": 200,
+          "minimum": 1,
+          "title": "Limit",
+          "type": "integer"
+        }
+      },
+      "type": "object",
+      "title": "list_adviceArguments"
+    },
+    "output_schema": {
+      "type": "object",
+      "additionalProperties": true,
+      "title": "list_adviceDictOutput"
+    },
+    "read_only": true
+  }
+}

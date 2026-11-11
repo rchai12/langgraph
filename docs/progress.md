@@ -208,3 +208,12 @@ The coding agent appends one entry per phase, in the form `docs/phase-convention
   - None
 - Follow-ups:
   - None
+
+## Phase 9b: the finance read actions (2026-11-10)
+- Tests: 859 -> 908 (given 45)
+- New public names: `domains.finance`: `SERVER`, `ACTIONS`, `RULES`, `DOMAIN`; `planning.plan`: `PLAN_CONTEXT_TOKENS`
+- Changed files: 10
+- Deviations:
+  - None
+- Follow-ups:
+  - None
