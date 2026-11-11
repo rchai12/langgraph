@@ -63,7 +63,7 @@ Scratch work lives in the session scratchpad: given files under `<scratch>/pNN/`
 
 ### 6. Spot checks (on paper)
 
-20. Each row names one deciding test. Trace its exact input through the broken code line by line (a loop over `range(n)` with that `n`), and write down the correct and broken outputs; they must differ. A layered defence loses every layer, or the test reaches the inner one. For a long output, name one element to look for. The verifier confirms the rows against the coder's build.
+20. Each row names one deciding test. Trace its exact input through the broken code line by line (a loop over `range(n)` with that `n`), and write down the correct and broken outputs; they must differ. A layered defence loses every layer, or the test reaches the inner one. The "Broken" cell names a short value from the data (`'equals'`, `propose_category`), never pytest's wording, which changes with the output's length. Name the test by its full node id, never by `-k`. The verifier confirms the rows against the coder's build.
 
 ### 7. Write the spec and the guide
 

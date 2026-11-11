@@ -87,7 +87,7 @@ Each action exists in the routed domain; each step's arguments validate against 
 
 ### Answer
 
-A decision point (`answer`, `planning/answer.py`, critical; Phase 5b) that turns the request and the steps' validated results into the reply (at most 2000 characters, not blank), with the results passed in as data. It cannot call tools.
+A decision point (`answer`, `planning/answer.py`, critical; Phase 5b) that turns the request and the steps' validated results into the reply (at most 2000 characters, not blank), with the results passed in as data. It cannot call tools. Before it, code writes every integer field `<name>_cents` as `<name>_dollars`, a string such as `"-42.10"`, so the model never does the arithmetic; the log and the run state keep the cents, and the 24000-byte bound is measured on the converted message (Phase 9d, decided 2026-11-10).
 
 ## Contracts (`conductor/contracts/`, pure Pydantic, no project imports)
 
@@ -164,7 +164,7 @@ Both appear in the terminal (`conductor approvals ...`) and on the approvals pag
 
 ## Evaluation harness
 
-`conductor eval run` (not part of `scripts/check.py`, since it needs the real model; Phase 8a) runs the route and plan decision points only, never the graph or a step, so an evaluation cannot cause a side effect (decided 2026-11-09). It reads a set of cases from TOML files under `evals/cases/`, committed and synthetic, (a request plus the expected route, the expected actions in order, chosen arguments, or "must escalate"), runs each K times (default 5), and reports per case and overall:
+`conductor eval run` (not part of `scripts/check.py`, since it needs the real model; Phase 8a) runs the route and plan decision points only, never the graph or a step, so an evaluation cannot cause a side effect (decided 2026-11-09). It reads a set of cases from TOML files under `evals/cases/` (`demo.toml`, and `finance.toml` from Phase 9d; a case may set `today`, a TOML date its plans see instead of the clock's, so date arguments hold on any day), committed and synthetic, (a request plus the expected route, the expected actions in order, chosen arguments, or "must escalate"), runs each K times (default 5), and reports per case and overall:
 
 - the share of replies that validated;
 - route and plan accuracy against the expected values;
