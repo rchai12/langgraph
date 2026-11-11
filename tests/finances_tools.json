@@ -462,6 +462,452 @@
     },
     "read_only": true
   },
+  "propose_category": {
+    "input_schema": {
+      "properties": {
+        "transaction_id": {
+          "title": "Transaction Id",
+          "type": "integer"
+        },
+        "category": {
+          "title": "Category",
+          "type": "string"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "transaction_id",
+        "category",
+        "reason"
+      ],
+      "type": "object",
+      "title": "propose_categoryArguments"
+    },
+    "output_schema": {
+      "type": "object",
+      "additionalProperties": true,
+      "title": "propose_categoryDictOutput"
+    },
+    "read_only": false
+  },
+  "propose_transfer": {
+    "input_schema": {
+      "properties": {
+        "out_id": {
+          "title": "Out Id",
+          "type": "integer"
+        },
+        "in_id": {
+          "title": "In Id",
+          "type": "integer"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "out_id",
+        "in_id",
+        "reason"
+      ],
+      "type": "object",
+      "title": "propose_transferArguments"
+    },
+    "output_schema": {
+      "type": "object",
+      "additionalProperties": true,
+      "title": "propose_transferDictOutput"
+    },
+    "read_only": false
+  },
+  "propose_not_transfer": {
+    "input_schema": {
+      "properties": {
+        "out_id": {
+          "title": "Out Id",
+          "type": "integer"
+        },
+        "in_id": {
+          "title": "In Id",
+          "type": "integer"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "out_id",
+        "in_id",
+        "reason"
+      ],
+      "type": "object",
+      "title": "propose_not_transferArguments"
+    },
+    "output_schema": {
+      "type": "object",
+      "additionalProperties": true,
+      "title": "propose_not_transferDictOutput"
+    },
+    "read_only": false
+  },
+  "propose_rule": {
+    "input_schema": {
+      "properties": {
+        "example_id": {
+          "title": "Example Id",
+          "type": "integer"
+        },
+        "pattern": {
+          "title": "Pattern",
+          "type": "string"
+        },
+        "category": {
+          "title": "Category",
+          "type": "string"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        },
+        "match": {
+          "default": "contains",
+          "enum": [
+            "contains",
+            "starts_with",
+            "equals"
+          ],
+          "title": "Match",
+          "type": "string"
+        },
+        "priority": {
+          "default": 0,
+          "maximum": 1000,
+          "minimum": -1000,
+          "title": "Priority",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "example_id",
+        "pattern",
+        "category",
+        "reason"
+      ],
+      "type": "object",
+      "title": "propose_ruleArguments"
+    },
+    "output_schema": {
+      "type": "object",
+      "additionalProperties": true,
+      "title": "propose_ruleDictOutput"
+    },
+    "read_only": false
+  },
+  "propose_merchant_alias": {
+    "input_schema": {
+      "properties": {
+        "example_id": {
+          "title": "Example Id",
+          "type": "integer"
+        },
+        "target": {
+          "title": "Target",
+          "type": "string"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "example_id",
+        "target",
+        "reason"
+      ],
+      "type": "object",
+      "title": "propose_merchant_aliasArguments"
+    },
+    "output_schema": {
+      "type": "object",
+      "additionalProperties": true,
+      "title": "propose_merchant_aliasDictOutput"
+    },
+    "read_only": false
+  },
+  "propose_group": {
+    "input_schema": {
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "example_id": {
+          "title": "Example Id",
+          "type": "integer"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        },
+        "kind": {
+          "default": "spending",
+          "enum": [
+            "spending",
+            "transfer",
+            "income"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "sensitive": {
+          "default": false,
+          "title": "Sensitive",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "example_id",
+        "reason"
+      ],
+      "type": "object",
+      "title": "propose_groupArguments"
+    },
+    "output_schema": {
+      "type": "object",
+      "additionalProperties": true,
+      "title": "propose_groupDictOutput"
+    },
+    "read_only": false
+  },
+  "propose_new_category": {
+    "input_schema": {
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "group": {
+          "title": "Group",
+          "type": "string"
+        },
+        "example_id": {
+          "title": "Example Id",
+          "type": "integer"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        },
+        "tax": {
+          "default": false,
+          "title": "Tax",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "group",
+        "example_id",
+        "reason"
+      ],
+      "type": "object",
+      "title": "propose_new_categoryArguments"
+    },
+    "output_schema": {
+      "type": "object",
+      "additionalProperties": true,
+      "title": "propose_new_categoryDictOutput"
+    },
+    "read_only": false
+  },
+  "propose_rule_change": {
+    "input_schema": {
+      "properties": {
+        "rule_id": {
+          "title": "Rule Id",
+          "type": "integer"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        },
+        "delete": {
+          "default": false,
+          "title": "Delete",
+          "type": "boolean"
+        },
+        "pattern": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pattern"
+        },
+        "match": {
+          "anyOf": [
+            {
+              "enum": [
+                "contains",
+                "starts_with",
+                "equals"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Match"
+        },
+        "priority": {
+          "anyOf": [
+            {
+              "maximum": 1000,
+              "minimum": -1000,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Priority"
+        },
+        "category": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Category"
+        }
+      },
+      "required": [
+        "rule_id",
+        "reason"
+      ],
+      "type": "object",
+      "title": "propose_rule_changeArguments"
+    },
+    "output_schema": {
+      "type": "object",
+      "additionalProperties": true,
+      "title": "propose_rule_changeDictOutput"
+    },
+    "read_only": false
+  },
+  "propose_category_change": {
+    "input_schema": {
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        },
+        "rename_to": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rename To"
+        },
+        "delete": {
+          "default": false,
+          "title": "Delete",
+          "type": "boolean"
+        },
+        "move_to": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Move To"
+        }
+      },
+      "required": [
+        "name",
+        "reason"
+      ],
+      "type": "object",
+      "title": "propose_category_changeArguments"
+    },
+    "output_schema": {
+      "type": "object",
+      "additionalProperties": true,
+      "title": "propose_category_changeDictOutput"
+    },
+    "read_only": false
+  },
+  "propose_finding_status": {
+    "input_schema": {
+      "properties": {
+        "type": {
+          "title": "Type",
+          "type": "string"
+        },
+        "status": {
+          "title": "Status",
+          "type": "string"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        },
+        "about": {
+          "default": "",
+          "title": "About",
+          "type": "string"
+        },
+        "month": {
+          "default": "",
+          "title": "Month",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "status",
+        "reason"
+      ],
+      "type": "object",
+      "title": "propose_finding_statusArguments"
+    },
+    "output_schema": {
+      "type": "object",
+      "additionalProperties": true,
+      "title": "propose_finding_statusDictOutput"
+    },
+    "read_only": false
+  },
   "list_proposals": {
     "input_schema": {
       "properties": {
@@ -492,6 +938,32 @@
       "title": "list_proposalsDictOutput"
     },
     "read_only": true
+  },
+  "log_advice": {
+    "input_schema": {
+      "properties": {
+        "text": {
+          "title": "Text",
+          "type": "string"
+        },
+        "subject": {
+          "default": "",
+          "title": "Subject",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text"
+      ],
+      "type": "object",
+      "title": "log_adviceArguments"
+    },
+    "output_schema": {
+      "type": "object",
+      "additionalProperties": true,
+      "title": "log_adviceDictOutput"
+    },
+    "read_only": false
   },
   "list_advice": {
     "input_schema": {

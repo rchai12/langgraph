@@ -14,7 +14,7 @@ from conductor.planning.plan import PlanInputs, plan_fields, plan_point
 
 
 def test_a_left_out_argument_keeps_its_default_except_the_phrase() -> None:
-    for action in finance.DOMAIN.actions:
+    for action in finance.READS:
         given = '{"phrase": "grocer"}' if action.name == "find_merchants" else "{}"
         filled = action.args.from_json(given)
         for name in action.args.model_fields:

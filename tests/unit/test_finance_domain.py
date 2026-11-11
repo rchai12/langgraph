@@ -18,7 +18,7 @@ from conductor.routing.rules import RuleConflict, RuleRoute, match_rules
 
 TESTS = Path(__file__).resolve().parents[1]
 REAL = json.loads((TESTS / "finances_tools.json").read_text())
-ACTIONS = {action.name: action for action in finance.DOMAIN.actions}
+ACTIONS = {action.name: action for action in finance.READS}
 
 
 def fake_module():
@@ -38,10 +38,10 @@ def test_twenty_read_actions_on_one_server() -> None:
     Registry((finance.DOMAIN,))
     assert finance.SERVER == McpServer("finances", ("FIN_DATA_DIR",))
     assert finance.DOMAIN.servers == (finance.SERVER,)
-    assert list(ACTIONS) == list(REAL)
+    assert list(ACTIONS) == [name for name, item in REAL.items() if item["read_only"]]
     assert {
         (action.kind, action.target == action.name, action.effect, action.server)
-        for action in finance.DOMAIN.actions
+        for action in finance.READS
     } == {("tool", True, "read", "finances")}
 
 

@@ -217,3 +217,12 @@ The coding agent appends one entry per phase, in the form `docs/phase-convention
   - None
 - Follow-ups:
   - None
+
+## Phase 9c: the finance proposals (2026-11-10)
+- Tests: 908 -> 971 (given 50)
+- New public names: `domains.finance`: `Id`, `Reason`, `Name`, `Match`, `Priority`, `Finding`, `READS`, `PROPOSALS`, `CategoryProposalArgs`, `TransferProposalArgs`, `RuleProposalArgs`, `AliasProposalArgs`, `GroupProposalArgs`, `NewCategoryProposalArgs`, `RuleChangeProposalArgs`, `CategoryChangeProposalArgs`, `FindingProposalArgs`, `NoteArgs`, `ProposalResult`, `NoteResult`
+- Changed files: 10
+- Deviations:
+  - None
+- Follow-ups:
+  - None

@@ -1,7 +1,8 @@
-"""A stand-in for the finances MCP server's 20 read tools, for the tests.
+"""A stand-in for the finances MCP server's 31 tools, for the tests.
 
 Each tool has the real tool's signature, so its input schema is the same as the one in
-tests/finances_tools.json, and returns a small invented result of the real shape.
+tests/finances_tools.json, and returns a small invented result of the real shape. The
+proposal tools store nothing.
 Run it as: <python> tests/fake_finances_server.py
 """
 
@@ -15,7 +16,9 @@ from pydantic import Field
 
 server = MCPServer("fake-finances")
 READ = ToolAnnotations(readOnlyHint=True)
+WRITE = ToolAnnotations(readOnlyHint=False)
 By = Literal["category", "group", "merchant", "person", "account", "bank", "card"]
+Match = Literal["contains", "starts_with", "equals"]
 
 GROCER = {
     "id": 101,
@@ -40,6 +43,29 @@ BRIEF = {
     "description": "TRANSFER TO SAVINGS",
     "amount_cents": -50000,
 }
+
+
+def proposal(kind: str, reason: str, **fields: Any) -> dict[str, Any]:
+    item = {
+        "id": 7,
+        "kind": kind,
+        "transaction_id": None,
+        "in_id": None,
+        "category": None,
+        "rule": None,
+        "alias": None,
+        "new": None,
+        "waits_for": None,
+        "rule_change": None,
+        "finding": None,
+        "category_change": None,
+        "reason": reason,
+        "status": "open",
+        "created_at": "2026-11-10T09:00:00+00:00",
+        "decided_at": None,
+        "out_of_date": False,
+    }
+    return {"proposal": {**item, **fields}}
 
 
 @server.tool(annotations=READ)
@@ -261,6 +287,110 @@ def find_merchants(phrase: str, limit: Annotated[int, Field(ge=1, le=20)] = 5) -
     return {"matches": [{"name": "Corner Grocer", "kind": "merchant", "score": 90}]}
 
 
+@server.tool(annotations=WRITE)
+def propose_category(transaction_id: int, category: str, reason: str) -> dict[str, Any]:
+    """Propose a category."""
+    return proposal("category", reason, transaction_id=transaction_id, category=category)
+
+
+@server.tool(annotations=WRITE)
+def propose_transfer(out_id: int, in_id: int, reason: str) -> dict[str, Any]:
+    """Propose a transfer."""
+    return proposal("transfer", reason, transaction_id=out_id, in_id=in_id)
+
+
+@server.tool(annotations=WRITE)
+def propose_not_transfer(out_id: int, in_id: int, reason: str) -> dict[str, Any]:
+    """Propose not a transfer."""
+    return proposal("not_transfer", reason, transaction_id=out_id, in_id=in_id)
+
+
+@server.tool(annotations=WRITE)
+def propose_rule(
+    example_id: int,
+    pattern: str,
+    category: str,
+    reason: str,
+    match: Match = "contains",
+    priority: Annotated[int, Field(ge=-1000, le=1000)] = 0,
+) -> dict[str, Any]:
+    """Propose a rule."""
+    rule = {"match": match, "pattern": pattern, "priority": priority}
+    return proposal("rule", reason, transaction_id=example_id, category=category, rule=rule)
+
+
+@server.tool(annotations=WRITE)
+def propose_merchant_alias(example_id: int, target: str, reason: str) -> dict[str, Any]:
+    """Propose a merchant alias."""
+    alias = {"source": "Corner Grocer 42", "target": target}
+    return proposal("alias", reason, transaction_id=example_id, alias=alias)
+
+
+@server.tool(annotations=WRITE)
+def propose_group(
+    name: str,
+    example_id: int,
+    reason: str,
+    kind: Literal["spending", "transfer", "income"] = "spending",
+    sensitive: bool = False,
+) -> dict[str, Any]:
+    """Propose a group."""
+    new = {"name": name, "group": None, "kind": kind, "sensitive": sensitive, "tax": None}
+    return proposal("group", reason, transaction_id=example_id, new=new)
+
+
+@server.tool(annotations=WRITE)
+def propose_new_category(
+    name: str,
+    group: str,
+    example_id: int,
+    reason: str,
+    tax: bool = False,
+) -> dict[str, Any]:
+    """Propose a category."""
+    new = {"name": name, "group": group, "kind": None, "sensitive": None, "tax": tax}
+    return proposal("new_category", reason, transaction_id=example_id, new=new)
+
+
+@server.tool(annotations=WRITE)
+def propose_rule_change(
+    rule_id: int,
+    reason: str,
+    delete: bool = False,
+    pattern: str | None = None,
+    match: Match | None = None,
+    priority: Annotated[int | None, Field(ge=-1000, le=1000)] = None,
+    category: str | None = None,
+) -> dict[str, Any]:
+    """Propose a rule change."""
+    change = {"rule_id": rule_id, "before": None, "delete": delete}
+    kind = "rule_delete" if delete else "rule_edit"
+    return proposal(kind, reason, category=category, rule_change=change)
+
+
+@server.tool(annotations=WRITE)
+def propose_category_change(
+    name: str,
+    reason: str,
+    rename_to: str | None = None,
+    delete: bool = False,
+    move_to: str | None = None,
+) -> dict[str, Any]:
+    """Propose a category change."""
+    change = {"name": name, "rename_to": rename_to, "delete": delete, "move_to": move_to}
+    kind = "category_delete" if delete else "category_rename"
+    return proposal(kind, reason, category_change=change)
+
+
+@server.tool(annotations=WRITE)
+def propose_finding_status(
+    type: str, status: str, reason: str, about: str = "", month: str = ""
+) -> dict[str, Any]:
+    """Propose a finding status."""
+    finding = {"type": type, "about": about, "month": month or "2026-11", "status": status}
+    return proposal("finding_status", reason, finding=finding)
+
+
 @server.tool(annotations=READ)
 def list_proposals(
     status: Literal["open", "accepted", "declined"] = "open",
@@ -268,6 +398,19 @@ def list_proposals(
 ) -> dict[str, Any]:
     """Proposals of one status."""
     return {"proposals": []}
+
+
+@server.tool(annotations=WRITE)
+def log_advice(text: str, subject: str = "") -> dict[str, Any]:
+    """Keep a note."""
+    note = {
+        "id": 3,
+        "created_at": "2026-11-10T09:00:00+00:00",
+        "subject": subject,
+        "text": text,
+        "dismissed_at": None,
+    }
+    return {"advice": note}
 
 
 @server.tool(annotations=READ)
