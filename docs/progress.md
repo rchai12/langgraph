@@ -226,3 +226,12 @@ The coding agent appends one entry per phase, in the form `docs/phase-convention
   - None
 - Follow-ups:
   - None
+
+## Phase 9d: dollars in the answer, and the finance cases (2026-11-10)
+- Tests: 971 -> 1006 (given 29)
+- New public names: `planning.answer`: `with_dollars`; `evals.cases`: `EvalCase.today`
+- Changed files: 10
+- Deviations:
+  - None
+- Follow-ups:
+  - None

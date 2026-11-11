@@ -1,0 +1,185 @@
+# Evaluation cases for the finance domain. Synthetic requests only (AGENTS.md rule 5).
+# Each case plans as if today were 2026-11-10, a Tuesday. Run with the finances command set
+# (evals start no server): CONDUCTOR_MCP__FINANCES="fin mcp serve"
+#   .venv/bin/conductor eval run --cases evals/cases/finance.toml
+
+[[case]]
+id = "spent-last-month"
+request = "How much did we spend last month?"
+today = 2026-11-10
+route = "finance"
+plan = ["get_spending"]
+args = [{ start = "2026-10-01", end = "2026-10-31" }]
+
+[[case]]
+id = "spent-yesterday"
+request = "How much did we spend yesterday?"
+today = 2026-11-10
+route = "finance"
+plan = ["get_spending"]
+args = [{ start = "2026-11-09", end = "2026-11-09" }]
+
+[[case]]
+id = "spending-by-merchant"
+request = "Break down this month's spending by merchant"
+today = 2026-11-10
+route = "finance"
+plan = ["get_spending"]
+args = [{ by = "merchant" }]
+
+[[case]]
+id = "net-worth-now"
+request = "What is our net worth right now?"
+today = 2026-11-10
+route = "finance"
+plan = ["get_balances"]
+
+[[case]]
+id = "net-worth-trend"
+request = "How has our net worth changed over the last 6 months?"
+today = 2026-11-10
+route = "finance"
+plan = ["get_net_worth"]
+args = [{ months = 6 }]
+
+[[case]]
+id = "account-balances"
+request = "What's the balance of each account?"
+today = 2026-11-10
+route = "finance"
+plan = ["get_balances"]
+
+[[case]]
+id = "grocer-transactions"
+request = "Show the last 10 transactions at Corner Grocer"
+today = 2026-11-10
+route = "finance"
+plan = ["list_transactions"]
+args = [{ merchant = "Corner Grocer", limit = 10 }]
+
+[[case]]
+id = "uncategorized"
+request = "Which transactions are uncategorized?"
+today = 2026-11-10
+route = "finance"
+plan = ["list_uncategorized"]
+
+[[case]]
+id = "bills-two-weeks"
+request = "What bills are due in the next two weeks?"
+today = 2026-11-10
+route = "finance"
+plan = ["get_upcoming"]
+args = [{ days = 14 }]
+
+[[case]]
+id = "subscriptions"
+request = "Which subscriptions do we pay for?"
+today = 2026-11-10
+route = "finance"
+plan = ["get_recurring"]
+args = [{ income = false }]
+
+[[case]]
+id = "recurring-income"
+request = "What recurring income do we get?"
+today = 2026-11-10
+route = "finance"
+plan = ["get_recurring"]
+args = [{ income = true }]
+
+[[case]]
+id = "over-budget"
+request = "Are we over budget this month?"
+today = 2026-11-10
+route = "finance"
+plan = ["get_budgets"]
+
+[[case]]
+id = "october-budgets"
+request = "How did we do against our budgets in October?"
+today = 2026-11-10
+route = "finance"
+plan = ["get_budgets"]
+args = [{ month = "2026-10" }]
+
+[[case]]
+id = "forecast"
+request = "Will any account run low over the next 30 days?"
+today = 2026-11-10
+route = "finance"
+plan = ["get_forecast"]
+args = [{ days = 30 }]
+
+[[case]]
+id = "three-months"
+request = "Compare our net spending and income for the last 3 months"
+today = 2026-11-10
+route = "finance"
+plan = ["month_over_month"]
+args = [{ count = 3 }]
+
+[[case]]
+id = "unusual"
+request = "Anything unusual in our spending this month?"
+today = 2026-11-10
+route = "finance"
+plan = ["get_insights"]
+
+[[case]]
+id = "data-coverage"
+request = "How up to date is our financial data?"
+today = 2026-11-10
+route = "finance"
+plan = ["data_coverage"]
+
+[[case]]
+id = "paired-transfers"
+request = "List the transfers between our accounts"
+today = 2026-11-10
+route = "finance"
+plan = ["list_transfers"]
+
+[[case]]
+id = "propose-groceries"
+request = "Propose the category Groceries for transaction 101"
+today = 2026-11-10
+route = "finance"
+plan = ["propose_category"]
+args = [{ transaction_id = 101, category = "Groceries" }]
+
+[[case]]
+id = "propose-rule"
+request = "Propose a rule that puts merchants containing CORNER GROCER in Groceries, with transaction 101 as the example"
+today = 2026-11-10
+route = "finance"
+plan = ["propose_rule"]
+args = [{ example_id = 101, pattern = "CORNER GROCER", category = "Groceries", match = "contains" }]
+
+[[case]]
+id = "keep-note"
+request = "finance: keep a note that we are saving for a new car"
+today = 2026-11-10
+route = "finance"
+plan = ["log_advice"]
+
+[[case]]
+id = "open-proposals"
+request = "Show my open proposals"
+today = 2026-11-10
+route = "finance"
+plan = ["list_proposals"]
+args = [{ status = "open" }]
+
+[[case]]
+id = "pay-a-bill"
+request = "finance: pay the electricity bill now"
+today = 2026-11-10
+route = "finance"
+plan = "escalate"
+
+[[case]]
+id = "not-finance"
+request = "Book a flight to Lisbon for Friday"
+today = 2026-11-10
+route = "escalate"

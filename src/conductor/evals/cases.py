@@ -1,13 +1,14 @@
 import re
 import tomllib
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
 from typing import Any, Literal
 
 from conductor.registry import Registry
 
 _ID = re.compile(r"^[a-z0-9][a-z0-9-]{0,63}$")
-_CASE_KEYS = frozenset({"id", "request", "route", "plan", "args"})
+_CASE_KEYS = frozenset({"id", "request", "route", "plan", "args", "today"})
 
 
 @dataclass(frozen=True)
@@ -17,6 +18,7 @@ class EvalCase:
     route: str
     plan: tuple[str, ...] | Literal["escalate"] | None = None
     args: tuple[dict[str, Any], ...] | None = None
+    today: date | None = None
 
 
 class CaseFileError(Exception):
@@ -65,8 +67,9 @@ def _case(
         raise CaseFileError(path, f"case {number}: route must be a registered domain or escalate")
     plan = _plan(path, registry, item, number, route)
     args = _args(path, item, number, plan)
+    today = _today(path, item, number)
     seen.add(case_id)
-    return EvalCase(case_id, request, route, plan, args)
+    return EvalCase(case_id, request, route, plan, args, today)
 
 
 def _plan(
@@ -108,3 +111,12 @@ def _args(
     ):
         raise CaseFileError(path, f"case {number}: args must be one table per planned step")
     return tuple(dict(table) for table in raw)
+
+
+def _today(path: Path, item: dict[str, Any], number: int) -> date | None:
+    if "today" not in item:
+        return None
+    value = item["today"]
+    if type(value) is not date:
+        raise CaseFileError(path, f"case {number}: today must be a date such as 2026-11-10")
+    return value

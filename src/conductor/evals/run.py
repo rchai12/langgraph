@@ -75,6 +75,7 @@ def run_case(
                 model_name=model_name,
                 log=log,
                 run_id=run_id,
+                today=case.today,
             )
         outcomes.append(json.dumps(_outcome(routed, planned), sort_keys=True))
         route_right = _route_right(case, routed)

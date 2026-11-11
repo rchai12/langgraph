@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import date
 from typing import Annotated, Literal, Union
 
 from pydantic import Field, create_model
@@ -65,8 +66,8 @@ def plan_point(domain: Domain) -> DecisionPoint:
 _WEEKDAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
 
 
-def plan_fields(domain: Domain) -> dict[str, str]:
-    day = clock.today()
+def plan_fields(domain: Domain, today: date | None = None) -> dict[str, str]:
+    day = clock.today() if today is None else today
     lines = [f"- {action.name}: {action.description}" for action in domain.actions]
     return {
         "domain": domain.name,
@@ -85,13 +86,14 @@ def plan_request(
     model_name: str,
     log: EventLog,
     run_id: str,
+    today: date | None = None,
 ) -> Planned | Escalation:
     domain = registry.domain(routed.route.domain)
     try:
         decision = decide(
             plan_point(domain),
             PlanInputs(request=routed.request),
-            fields=plan_fields(domain),
+            fields=plan_fields(domain, today=today),
             model=model,
             model_name=model_name,
             log=log,
