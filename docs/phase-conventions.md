@@ -2,11 +2,16 @@
 
 Every phase spec and verification guide follows this document. A spec states only what is particular to its phase and points here for the rest. Where a spec says something different, the spec wins.
 
+The role entry points and baseline, isolation, evidence and correction procedures
+are in [ai-workflow.md](ai-workflow.md). Implementation and independent review
+are separate assignments.
+
 ## For the coder
 
 ### Before you start
 
 - The spec is committed and the tree is clean: `git status --short` prints nothing.
+- Read the spec and its Corrections section and given tests in full. A standard coder does not read verification guides or reviews; the owner hands back findings. Resolve unrelated changes through the shared isolation procedure before implementation.
 - From Phase 2 on: run `.venv/bin/python scripts/check.py`. It must end with `All checks passed.`. Note the number passed in its `tests` step: the spec calls it **N**.
 
 ### Sections
@@ -62,15 +67,23 @@ Add an entry at the end of `docs/progress.md` in exactly this form. Every field 
 
 In your final message give the `Sections:` table and the last ten lines of `scripts/check.py`'s output, the output line of each other acceptance command, and for each requirement the name of a test (or the probe line) that covers it.
 
+### When you stop
+
+Still write the phase entry using the exact schema above. Put
+`Stopped: <requirement/command> | <observation> | <what allows completion>` as the
+first Follow-ups item. Use actual measured counts and identify unrun gates;
+never report blocked work as accepted. Preserve earlier entries. Workflow
+maintenance has no application phase id and is recorded separately.
+
 ## For the verifier
 
 - Do not modify any file in the repository, except to write your report (below). Report findings only. The work under review is uncommitted: "the diff" is `git status --short` plus `git diff HEAD` plus the untracked files, read before you write the report.
 - Run the guide's gates exactly as written, from the repository root. The first gate is `scripts/check.py --first <the spec's sections>`; if a section fails, report it with the table's rerun command.
 - **Scope audit**: `git status --short` shows only the spec's Scope paths; given files are identical to the blocks in the spec; no existing test or unlisted module changed.
-- Save the guide's probe script **outside the repository**, run it from the repository root with `.venv/bin/python <path>`, and delete it afterwards. Every line must end in `ok`; the last line must be `FAILURES 0`.
+- Save the guide's probe script **outside the repository**, run it from the repository root with `.venv/bin/python <path>`, and delete it afterwards. Every check line must start with `ok`, matching `probe_skeleton.py`; the last line must be `FAILURES 0`.
 - Judge code by what it does, never by resemblance to another way of writing it.
 - **Coverage reached the wrong way is a finding**: a test that runs a line but asserts nothing about what it does, a `# pragma: no cover` the spec did not allow, or code the spec requires removed to close a gap.
-- **Spot checks**: for each row of the guide's spot-check table, make the named one-line change in a copy of the module outside the repository or restore it from a copy you made first (never with `git checkout` or `git restore`), run the deciding test, and confirm it fails; then restore the file and confirm `git diff` is as before.
+- **Spot checks**: use an isolated scratch copy and its own imports. First confirm the original deciding test passes; make the named one-line mutation, confirm it fails for the intended reason, and restore saved bytes. Collection or setup failures do not prove the mutation was caught. Confirm the reviewed tree is unchanged. Never use `git checkout` or `git restore`.
 
 ### Report and verdict
 

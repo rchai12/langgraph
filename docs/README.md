@@ -4,6 +4,7 @@
 - [roadmap.md](roadmap.md): all phases, their status, and the Backlog
 - [testing.md](testing.md): test layers, rules, critical modules
 - [phase-conventions.md](phase-conventions.md): what every phase spec and verification guide assume (starting checks, rules, acceptance, the progress entry, the verdict)
+- [ai-workflow.md](ai-workflow.md): development roles, clean baselines, isolation, evidence, stops and correction handoffs for Claude and Codex
 - [phases/](phases/): detailed specs, one per phase
 - `verification/`: one guide per phase, for the second agent that checks the implementation against the spec
 - [progress.md](progress.md): log the coding agent appends to after each phase
@@ -25,4 +26,9 @@
 3. Commit.
 4. The architect writes or adjusts the next phase spec and its verification guide based on what was actually built.
 
-The architect's rules for this project are in `.claude/skills/phase-architect/SKILL.md`. They build on the `finances` project's phase-architect skill, whose general rules apply here.
+Use `phase-architect`, `phase-coder`, and `phase-verifier` for the respective
+assignments. Codex discovers them in `.agents/skills/`; Claude discovers them in
+`.claude/skills/`. The shared instructions are local to this repository and adapt
+the `finances` and `tasking` workflows to Conductor's rules. No sibling skill or
+script is an implicit prerequisite. Committing and pushing require the owner's
+authorization.

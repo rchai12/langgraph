@@ -2,6 +2,16 @@
 
 This file applies to every phase. Read it, then `docs/architecture.md`, then `docs/phase-conventions.md` (what every phase spec and guide assume), then the phase spec you were assigned.
 
+## Development roles
+
+Use the project's `phase-architect`, `phase-coder`, or `phase-verifier` skill for
+the assigned role. Codex entry points live in `.agents/skills/`; shared role
+instructions and Claude entry points live in `.claude/skills/`. Follow
+`docs/ai-workflow.md` for baseline isolation, handoffs, evidence and corrections.
+The architect writes executable phase documents, the coder implements one named
+phase, and a separate verifier judges the diff and writes only its report.
+Do not choose another role or start another phase without an assignment.
+
 ## Scope discipline
 
 - Implement **only** the phase you were assigned. Do not build features from later phases, even if it seems convenient.
@@ -9,6 +19,7 @@ This file applies to every phase. Read it, then `docs/architecture.md`, then `do
 - If the spec seems wrong or impossible, stop and explain instead of improvising a large workaround.
 - Do not add dependencies that the phase spec does not list. If you believe one is needed, stop and ask.
 - When finished, append an entry to `docs/progress.md` in the form `docs/phase-conventions.md` gives.
+- If implementation stops early, still record its progress entry with a first Follow-ups item `Stopped: <requirement/command> | <observation> | <what allows completion>`. Verification changes only the review report. Workflow maintenance is recorded outside the machine-parsed phase log.
 
 ## Running commands
 

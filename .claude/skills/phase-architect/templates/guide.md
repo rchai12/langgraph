@@ -4,6 +4,11 @@ Spec: `docs/phases/phase-NNx-<slug>.md`. Follow `docs/phase-conventions.md` ("Fo
 
 **First, check that the coder ran.** If `git status --short` lists none of <the coder's new files or changed modules>, stop. Report under "For the architect" that there is no implementation to verify, and write no review file, because a FAIL review without a progress entry breaks `check_reports.py` on `main`.
 
+Check the committed baseline and finalized documents as `docs/ai-workflow.md`
+describes. Distinguish a stopped coder, missing implementation, mixed scope and
+environment restrictions from a functional failure. If the phase has no progress
+entry, report the missing handoff without creating an orphan review.
+
 The coder:
 - <what the coder did, one line per part>
 
@@ -36,7 +41,7 @@ Searches, each with no output:
 
 ## 4. Probe
 
-Save the probe outside the repository, run it from the repository root with `.venv/bin/python <path>`, then delete it. Every line must start with `ok`, and the last must be `FAILURES 0`.
+Save the probe outside the repository, run it from the repository root with `.venv/bin/python <path>`, then delete it. Every check line must start with `ok`, and the last must be `FAILURES 0`.
 
 It checks:
 - <one line per check>
@@ -49,7 +54,12 @@ A stop at its `assert` lines is the probe's fault. Report it under "For the arch
 
 The coder's test files cover each bullet of the spec's "Tests to write" with its deciding input. Name the test for each bullet, and report a missing one as a finding.
 
-Spot checks: make each change, run the deciding test, see it fail, and restore. Run them with `PYTHONDONTWRITEBYTECODE=1` and `-vv`. Restore with the reverse edit, not by copying a saved file back. Afterwards, run `find src tests scripts -name __pycache__ -prune -exec rm -rf {} +` before any further gate.
+Spot checks run in an isolated scratch copy, using that copy's source through
+`PYTHONPATH`. First confirm the original deciding test passes; make the mutation,
+run with `PYTHONDONTWRITEBYTECODE=1`, `--no-cov` and `-vv`, and confirm it fails for
+the intended reason. Restore the scratch file from its saved bytes. Confirm the
+reviewed tree is unchanged. `spot.py --root <scratch copy>` automates replacement
+and restoration; inspect output because collection errors are not caught mutations.
 
 Write down what each broken run printed. A different failure than the "Broken" column is not a finding (note it for the architect), but a test that still passes is.
 

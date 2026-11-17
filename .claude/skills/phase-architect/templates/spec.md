@@ -45,7 +45,7 @@ None new.
 
 ## Facts
 
-From a spike on YYYY-MM-DD. <Only facts read from the real library, model, or server, with synthetic inputs.>
+Checked on YYYY-MM-DD. <Facts from installed library source or small offline synthetic spikes; use ScriptedModel and fake servers. Live-system facts become owner checks before building.>
 
 ## Requirements
 
