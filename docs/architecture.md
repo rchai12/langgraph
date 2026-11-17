@@ -1,6 +1,6 @@
 # Architecture
 
-Status (2026-11-17): built and independently verified through Phase 9d (1006 tests). The finance domain, approvals page and evaluation harness exist. Audit remediation 9e–9r is planned next in `docs/roadmap.md`, before the Phase 10 coding pipeline; later capabilities below remain design until their phase ships.
+Status (2026-11-17): built and independently verified through Phase 9d (1006 tests). The finance domain, approvals page and evaluation harness exist. Audit remediation is next in `docs/roadmap.md`: 9e is specified and 9f–9r remain planned, before the Phase 10 coding pipeline; later capabilities below remain design until their phase ships.
 
 ## Goal
 
@@ -147,6 +147,20 @@ Long-term memory (preferences, contacts, summaries of past threads, optionally r
 ## The event log
 
 `conductor/events.py` (critical module). Each event is `{run_id, seq, at, kind, node, payload}`: `seq` counts from 1 per run with no gaps, `at` is UTC with microseconds, and `payload` is any JSON value. Lines are written with sorted keys and flushed to disk before `append` returns. Reading a log checks every line and refuses a damaged one with its line number. The log is the record of what the agent did and why, and the source for replaying a run with `ScriptedModel`.
+
+### Specified next: status reads without a runtime (Phase 9e)
+
+Phase 9e is specified, not built. The owner chose graph-free checkpoint reads and
+503 for existing but malformed/unreadable saved state (2026-11-17). The spec moves
+the display types and validated sequential checkpoint projection into
+`graph/status.py`, preserving supervisor imports. `start_run` receives its event
+log explicitly, removing the process-wide Services owner. `runtime.read_state`
+reads an existing checkpoints database through a read-only transaction without
+building a graph, model, registry, store or log; missing runs remain 404. Pending
+node writes and stale interrupts are covered by format-4 compatibility tests.
+Approval decisions, leases and resume policy do not change. See
+[the spec](phases/phase-09e-runtime-ownership-and-status.md) and
+[verification guide](verification/phase-09e-runtime-ownership-and-status.md).
 
 ## Coding pipeline
 
