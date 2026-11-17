@@ -1,6 +1,6 @@
 # Architecture
 
-Status (2026-10-25): designed; nothing built yet. Phase 1 is specified.
+Status (2026-11-17): built and independently verified through Phase 9d (1006 tests). The finance domain, approvals page and evaluation harness exist. Audit remediation 9e–9r is planned next in `docs/roadmap.md`, before the Phase 10 coding pipeline; later capabilities below remain design until their phase ships.
 
 ## Goal
 
@@ -173,7 +173,7 @@ Both appear in the terminal (`conductor approvals ...`) and on the approvals pag
 
 Each `eval run` saves a report as JSON under `data/evals/reports/`, named by its UTC time (Phase 8b): every case's numbers and run ids, plus a fingerprint (the model name, the digests and template hashes its runs' `MODEL_REQUEST` events logged, and each case file's SHA-256). It then compares with the latest earlier report: what changed in the fingerprint, each case whose shares moved (as shares, so a different K still compares), and the cases added or removed. Latency is recorded, not compared; the exit code is 0 whatever the comparison shows (decided 2026-11-10). An unreadable previous report stops the evaluation before any run.
 
-## Package layout (planned)
+## Package layout (built through Phase 9d)
 
 ```
 conductor/
@@ -187,18 +187,23 @@ conductor/
     events.py                   the event log (Phase 1, critical)
     diagnostics.py              conductor doctor's checks (Phase 1)
     contracts/                  pure typed contracts (Phase 2)
-    registry/                   domains and actions, plan checking (Phase 2)
+    registry.py                 domains and actions (Phase 2)
+    plancheck.py                plan validation against the registry (Phase 2, critical)
     llm/                        the only Ollama code: model names (Phase 1), decide() (Phase 3)
     prompts/                    versioned prompt templates (Phase 3)
-    store/                      conductor.db: approvals, escalations, leases (Phase 4)
+    store.py                    conductor.db: approvals, escalations, leases (Phase 4, critical)
+    decisions.py                record policy-validated decisions (Phase 4)
     policy.py                   which actions need approval (Phase 4, critical)
     routing/, planning/         rules and decision points (Phase 5)
     graph/                      the supervisor graph (Phase 5)
+    runtime.py                  checkpoints, leases and step runners (Phase 5, critical)
     mcp_client/                 MCP sessions scoped per domain (Phase 6)
     web/                        the approvals page (Phase 7)
     evals/                      the evaluation harness (Phase 8)
-    domains/                    finance (Phase 9), code (Phase 10), later others
-    cli/                        Typer commands (thin)
+    domains/                    demo and finance (Phase 9); code is planned for Phase 10
+    cli/                        Typer commands
+    views.py                    shared display rows
+    reports.py                  progress/review validation (Phase 2, critical)
   tests/                        unit, integration, e2e
   data/                         gitignored
 ```

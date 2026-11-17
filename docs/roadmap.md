@@ -2,9 +2,9 @@
 
 Each phase is one coding session for a capable coding agent and ends with every check green. From Phase 2 on, a spec is about half the size of Phase 1 (about 10 requirements and 30 given tests), so most rows below become two or more lettered sub-phases (`2a`, `2b`, ...); numbers are never reused or renumbered. Specs are written one or two phases ahead, from the code that exists.
 
-Status (2026-11-10): Phases 1 to 8 and 9a to 9c are built and verified (971 tests). Phase 9d (dollars in the answer, and the finance cases) is specified.
+Status (2026-11-17): Phases 1 to 8 and 9a to 9d are built and verified (1006 tests). The verified findings in [codebase-audit.md](codebase-audit.md) are accepted planning input. Audit remediation 9e–9r is next, before the coding pipeline. These rows are planned, not executable specs or completed fixes.
 
-**Build order:** 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11; 12 and 13 when wanted.
+**Build order:** 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9a–9d (complete) → 9e → 9f → 9g → 9h → 9i → 9j → 9k → 9l → 9m → 9n → 9o → 9p → 9q → 9r → 10 → 11; 12 and 13 when wanted. Existing phase numbers retain their meaning.
 
 | # | Phase | Outcome | Spec |
 |---|---|---|---|
@@ -17,10 +17,72 @@ Status (2026-11-10): Phases 1 to 8 and 9a to 9c are built and verified (971 test
 | 7 | Approvals page | A FastAPI page on 127.0.0.1 listing pending approvals and escalations, deciding them, and resuming the thread; form token, origin check, no telemetry. Split (decided 2026-11-09): 7a `conductor web` on 127.0.0.1 with the host check, security headers, and read-only pages; 7b the deciding forms (form token, origin check, `conductor.decisions`) and resuming in the background | [phase-07a](phases/phase-07a-approvals-page-read-only.md); [phase-07b](phases/phase-07b-deciding-on-the-page.md) |
 | 8 | Evaluation harness | Cases as files, K runs each against the real model, schema-valid rate, accuracy, consistency, escalation rate, latency; reports compared with the previous one. Split (decided 2026-11-09): 8a cases as TOML in `evals/cases/`, K runs (5) through the route and plan decision points only, consistency first; 8b saved reports with digests and prompt hashes, compared with the previous one | [phase-08a](phases/phase-08a-running-evaluation-cases.md); [phase-08b](phases/phase-08b-saved-and-compared-reports.md) |
 | 9 | Finance domain | Read actions over the `finances` MCP server's read tools (`fin mcp serve`), its proposal tools as `propose` actions, an answer decision point; evaluation cases for finance requests. Split (decided 2026-11-10): 9a groundwork (today in the plan prompt, a context size per decision point, the answer's 16384-token context and 24000-byte bound); 9b the 20 read tools as actions, with bounded arguments and results; 9c the 11 write tools as `propose` actions, their ids taken from the request (planning again after the reads would be a later phase); 9d dollars in the answer (code converts `_cents`), a fixed day per evaluation case, and 24 finance cases (the tuning spike changed no description) | [phase-09a](phases/phase-09a-today-and-a-bounded-answer.md); [phase-09b](phases/phase-09b-finance-read-actions.md); [phase-09c](phases/phase-09c-finance-proposals.md); [phase-09d](phases/phase-09d-dollars-and-finance-cases.md) |
-| 10 | Coding pipeline | Coder and verifier adapters around external agents, the strict verdict parser (critical), automatic retry after FAIL (at most 2), escalation, commit and push as approved `write` actions | |
+| 9e | Runtime ownership and status reads | Remove the process-wide `_SERVICES` owner; pass required services explicitly. Read checkpoint status without compiling a graph, constructing a model or opening unused runtime services. Repeated run-page polling releases resources; validate checkpoint status/interrupts and raise safe `RunError` for malformed state. Audits 1, 5 | Planned |
+| 9f | Background job lifecycle | Bound retained completed threads and errors, preserve active-run exclusion and observable outcomes, and define shutdown behavior so server shutdown need not wait for the full model timeout. Coordinate retention with 9h so cleanup does not erase unacknowledged failure evidence. Audit 1 | Planned |
+| 9g | One bounded Ollama model listing | Share one `/api/tags` parser between doctor and model calls; isolate an invalid entry from unrelated valid models; reject a missing/invalid digest for the selected model. Cap tags and chat response reads, including missing or dishonest length headers. Preserve intentional caller-specific timeouts and proxy-free loopback access. Audits 2, 9 | Planned |
+| 9h | Recover a failed web resume | Offer a protected resume control after a recorded decision when state permits it; reuse the recorded decision without applying it twice. Preserve leases, stale-decision checks and stopped-node restrictions. Keep durable, sanitized failure evidence and an actionable page message. Never log arbitrary exception text. Audits 3, 1 | Planned |
+| 9i | Private storage primitives | Share owner-only directory/file creation across events, store, runtime, MCP logs and evaluation reports; correct doctor permissions for an existing data directory. Preserve append behavior and SQLite sidecar protections. Audit 6 | Planned |
+| 9j | Shared validation and presentation contracts | Consolidate the 32-hex id shape, request bounds, Contract-type predicate and UTC display format without importing project modules into `contracts`. Keep wire shapes, validation order, messages and display output stable unless an explicit correction says otherwise. Audit 6 | Planned |
+| 9k | Smaller graph and structured failures | Extract node construction from the supervisor without changing interrupt/replay boundaries. Record runner cause codes as structured event fields, preserving unknown-outcome visibility for writes. Keep critical coverage on all extracted approval and execution logic. Checkpoint validation is addressed in 9e; coder attempts remain in Phase 10. Audit 5 | Planned |
+| 9l | Finance catalog split | Separate read and proposal contracts/actions, retaining compatible public imports, action order, descriptions, tighter local bounds and all 31 tools. Keep models hand-written and fake-server/captured-schema comparison independent; document the three-artifact update checklist. Do not generate contracts from captured JSON or add tools. Audit 4 | Planned |
+| 9m | CLI command groups | Split approvals, escalations, evaluation and web commands into modules and share decision/confirmation/resume plumbing. Preserve command names, options, exit codes and output, and keep decisions in the existing policy/service layer. Audit 6 | Planned |
+| 9n | Named web handlers | Extract nested route bodies and share approval/escalation record-and-resume plumbing, carrying forward 9h recovery. Preserve Host/origin/token checks, headers, escaping, redirects and security behavior on every response. Audits 3, 6 | Planned |
+| 9o | Immutable validated settings | Normalize before freezing settings; keep accepted host/path behavior and caller compatibility. Map validation errors to the actual configuration field with constant safe text instead of reporting every failure as `CONDUCTOR_MCP`. Audit 9 | Planned |
+| 9p | Event-log ownership and listing | Define and enforce append ownership across EventLog instances/processes so sequences cannot duplicate. Reduce repeated whole-log scans for listings and initial sequence discovery while retaining corruption detection and append-only records; specify cache invalidation and bounded resource use before implementation. Audit 9 | Planned |
+| 9q | Behavior-based test organization | Consolidate phase-suffixed test files by module/behavior in small family-by-family specs, preserving collected cases, assertions, section assignments and coverage. Reconcile testing docs, conventions and architect templates so future given/coder test separation does not recreate `*_more.py` sprawl. Audit 7 | Planned |
+| 9r | Broader lint gates | Introduce unused-argument and complexity checks after the module splits, with explicit thresholds and reviewed behavior-preserving repairs. No blanket ignores or per-file exemptions to hide large modules. Use the installed Ruff; no new dependency is assumed. Audit 9 | Planned |
+| 10 | Coding pipeline | After audit remediation: coder and independent verifier adapters around external agents, the strict verdict parser (critical), automatic retry after FAIL (at most 2), escalation, commit and push as separately approved `write` actions. Persist and pass attempt/approved-implementation identity through State and `_ask_step`; only a verifier FAIL within that approved implementation skips renewed implementation approval. Any store schema change ships with a versioned migration and upgrade tests (audits 5, 6) | |
 | 11 | Replay | Re-run a logged run with `ScriptedModel` from its event log; turn a real run into a regression test | |
 | 12 | Email, calendar, tasks | One domain each over their MCP servers, when those systems exist | |
 | 13 | Long-term memory | Preferences and past-thread summaries through LangGraph's store, optionally recalled by local embeddings, passed in as labelled context only | |
+
+## Audit remediation plan (2026-11-17)
+
+Owner direction: the audit findings are verified; integrate them into the next
+phases. This plan accepts them without reopening the audit. Ordering, grouping
+and keeping Phase 10's established number are architect decisions. Phase 9e is
+the next spec to write. No remediation spec or guide is claimed ready by this
+roadmap update; write and validate those one or two phases ahead from the actual
+predecessor, following the normal size limits. Split an oversized row before
+writing given tests. In particular, 9q is a sequence of small test-family changes,
+not permission for a whole-suite rewrite in one coding session; allocate unused
+lettered phase ids after 9r for additional slices and update this build order.
+
+The sequential build order above is the delivery order. The important dependencies
+are: 9e before 9f/9h/9k; 9f and 9g before 9h; shared helpers 9i/9j before the
+CLI/web splits; 9k–9n before 9q/9r; all remediation before Phase 10. Behavior
+changes have failing-first tests; pure extractions retain public contracts and
+meaningful regression assertions. Any remediation that changes the store schema must
+include a versioned migration and upgrade tests at that point, rather than wait
+for Phase 10. Extracted critical logic remains on the critical
+coverage list. Synthetic offline tests and the existing acceptance gates apply.
+
+| Verified finding | Disposition and completion evidence to require in its spec |
+|---|---|
+| 1: retained graph/services and expensive status reads | 9e: repeated status polling constructs no graph/model, releases services, and validates malformed checkpoint status/interrupts as `RunError` rather than casts or `KeyError` |
+| 1: retained resumer threads/errors and shutdown | 9f: repeated completed jobs stay within a specified retention bound, active jobs remain protected, and shutdown is bounded with durable error handoff to 9h |
+| 2: inconsistent tags parsing | 9g: doctor and model agree for a selected model when another entry is malformed; preserve explicit doctor/run timeout differences |
+| 3: failed page resume and copied decision handlers | 9h recovery tests cover already-recorded decisions, duplicate POSTs, forbidden resumes and safe durable errors; 9n removes duplicated handler plumbing |
+| 4: finance catalog duplication/growth | 9l: all tool/schema compatibility checks and tighter local bounds survive the split; fake and captured schemas remain independent checks |
+| 5: supervisor size and lost failure codes | 9k: graph node/interrupt semantics and cause-code events are pinned; 9e covers malformed checkpoints |
+| 5: unwired implementation attempt | Phase 10: verifier FAIL can retry only the same approved implementation within its cap; restart and rejection paths cannot bypass approval |
+| 6: timestamps, ids, private files, Contract checks and request bounds | 9i/9j: migrate every listed caller with parity and permission tests; keep `contracts` independent |
+| 6: CLI and web size/duplication | 9m/9n: command/output and response/security regression checks; shared decisions still go through policy |
+| 6: store evolution | Phase 10: migration before the first schema change, preserving approvals, decisions, escalations and leases; leave the parallel approval/escalation methods alone until a real third record type justifies abstraction |
+| 7: phase-suffixed tests contradict documentation | 9q: family-level collection comparison and unchanged behavior/coverage; update prospective naming rules and templates together |
+| 8: stale architecture status and package tree | Corrected in this planning update to the built Phase 9d baseline; future phases update the affected layout when they ship |
+| 9: misleading settings errors and mutable validated values | 9o: field-specific safe errors, normalization and mutation refusal |
+| 9: uncapped HTTP response reads | 9g: bounded tags/chat reads reject oversize responses without echoing their content |
+| 9: full event-log scans and duplicate sequence risk | 9p: synthetic multi-writer/reopen/corruption cases plus a listing/scan-cost regression check; preserve full corruption detection |
+| 9: narrow Ruff rules | 9r: new rules pass with concrete repairs and no blanket suppression |
+
+Keep the audit as the original evidence record. Its suggested exception-message
+retention is constrained by `AGENTS.md`: store constant error text and allowlisted
+codes/type labels plus identifiers, never arbitrary library exception messages.
+Do not add general retry of model output, new model providers, real-service
+checks, telemetry, new finance tools or dependencies as part of remediation.
+The audit's positive findings remain constraints: approval revalidation, tracing
+off, private SQLite sidecars and invalid-output escalation must keep their tests.
 
 ## Backlog
 
