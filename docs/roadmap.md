@@ -4,7 +4,7 @@ Each phase is one coding session for a capable coding agent and ends with every 
 
 Status (2026-11-17): Phases 1 to 8 and 9a to 9d are built and verified (1006 tests). The verified findings in [codebase-audit.md](codebase-audit.md) are accepted planning input. Audit remediation 9e–9r is next, before the coding pipeline. These rows are planned, not executable specs or completed fixes.
 
-**Build order:** 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9a–9d (complete) → 9e → 9f → 9g → 9h → 9i → 9j → 9k → 9l → 9m → 9n → 9o → 9p → 9q → 9r → 10 → 11; 12 and 13 when wanted. Existing phase numbers retain their meaning.
+**Build order:** 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9a–9d (complete) → 9e → 9f → 9g → 9h → 9i → 9j → 9k → 9l → 9m → 9n → 9o → 9p → 9q → 9r → 10 → 11; 12 and 13 when wanted; 14 (Discord approvals) after the shared Discord service contract exists, independently of 12/13. Existing phase numbers retain their meaning.
 
 | # | Phase | Outcome | Spec |
 |---|---|---|---|
@@ -33,8 +33,9 @@ Status (2026-11-17): Phases 1 to 8 and 9a to 9d are built and verified (1006 tes
 | 9r | Broader lint gates | Introduce unused-argument and complexity checks after the module splits, with explicit thresholds and reviewed behavior-preserving repairs. No blanket ignores or per-file exemptions to hide large modules. Use the installed Ruff; no new dependency is assumed. Audit 9 | Planned |
 | 10 | Coding pipeline | After audit remediation: coder and independent verifier adapters around external agents, the strict verdict parser (critical), automatic retry after FAIL (at most 2), escalation, commit and push as separately approved `write` actions. Persist and pass attempt/approved-implementation identity through State and `_ask_step`; only a verifier FAIL within that approved implementation skips renewed implementation approval. Any store schema change ships with a versioned migration and upgrade tests (audits 5, 6) | |
 | 11 | Replay | Re-run a logged run with `ScriptedModel` from its event log; turn a real run into a regression test | |
-| 12 | Email, calendar, tasks | One domain each over their MCP servers, when those systems exist | |
+| 12 | External domains: email, tasks and calendar | Email remains a separate domain. Tasks and calendar share one tasks domain over `docket mcp serve` on stdio: five `read` actions and six approved `write` actions, code-filled retry keys, bounded contracts, fake/schema compatibility checks and evaluation cases. Calendar reads require tasking stage 8 as well as its stage 6 MCP server. See the handoff plan below | Planned |
 | 13 | Long-term memory | Preferences and past-thread summaries through LangGraph's store, optionally recalled by local embeddings, passed in as labelled context only | |
+| 14 | Discord approvals and escalation answers | A third decision channel through the shared Discord service, with owner-checked presses, the same `conductor.decisions` and store, stale-step protection and first-decision-wins semantics. No Conductor bot or direct Discord connection; edits remain terminal/web. Replaces the notification backlog item. Depends on the shared service contract and explicit network/privacy design updates | Planned |
 
 ## Audit remediation plan (2026-11-17)
 
@@ -84,7 +85,78 @@ checks, telemetry, new finance tools or dependencies as part of remediation.
 The audit's positive findings remain constraints: approval revalidation, tracing
 off, private SQLite sidecars and invalid-output escalation must keep their tests.
 
+## Tasks and Discord handoff plan (2026-11-17)
+
+Source: [Tasks app: what Conductor needs to know](handoffs/langgraph.md), written
+2026-11-14. Incorporate its integration decisions here; its statement that tasking
+has nothing built is historical, not a current readiness assertion. Before writing
+an integration spec, check the owning project's current contracts and shipped
+schemas. Tasking's roadmap places MCP in stage 6 and calendar reads in stage 8;
+a stage-6 server alone does not establish calendar readiness. No live service is
+needed for Conductor development or verification.
+
+### Phase 12: tasks and calendar together
+
+Keep email as a separate domain; do not create a separate calendar domain/server.
+Specify Phase 12 in small slices: first code-filled arguments and runner context,
+then task reads, approved writes, calendar reads once available, and evaluation
+cases. Allocate the lettered ids when each spec is written; these are outcomes
+and dependencies, not executable assignments.
+
+| Handoff finding | Phase 12 requirement and verification target |
+|---|---|
+| Five reads | `list_tasks`, `get_task`, `list_proposals`, `list_events`, `check_availability` become `read` actions. Bound paging/ranges/results, check `readOnlyHint: true` and output schemas, and name failed calendar backends instead of silently omitting them |
+| Six writes; Conductor approval is final | `create_task`, `change_deadline`, `plan_work_time`, `snooze_task`, `complete_task`, `cancel_task` become `write`, never `propose`. Each stops for Conductor approval; the approved call applies immediately without a second tasking approval. Creation uses source `agent` |
+| No proposal approval tool | Listing proposals is allowed; no registered action accepts or approves a tasking proposal. Assert the action inventory excludes that capability |
+| Code-generated `request_key` | Derive `<run id>:<step id>` in code for each write, stable across retries/restarts of that step and distinct for other steps. The planner cannot supply or override it. Define how Action declares injected fields, how runner context carries both ids, and how the tool check validates the full server input schema while the planner sees only model-supplied fields. Cover the current `StepRunner.run(action, args)` limitation explicitly |
+| Unknown write outcome | Preserve structured `timeout`/`closed` visibility from 9k, ask before retrying, and resend the same key. Fake-server tests show one side effect after a lost response and retry; no automatic retry or new key that defeats deduplication |
+| Deadlines and planned work | Send `date`, nullable `time`, and `time_zone`; a date without time means 17:00 in that zone, and the resulting deadline stays a fixed instant while travelling. Pin timezone/DST boundary behavior in synthetic cases. Select planned work time using availability first; specify how a later write is bound to that read without model-invented step-output references |
+| Untrusted titles and local calendar data | Titles are plain text of at most 100 characters and treated as data in planner/answer prompts. Calendar event titles/times stay local, like finance results. Results use ISO times and ids; refusals are constant codes without echoed input |
+| Transport | Configure `CONDUCTOR_MCP__TASKS` to launch `docket mcp serve` as a child over stdio. Do not call tasking's HTTP API on port 8767 or connect Conductor directly to Google, iCloud, Outlook or their credentials |
+| Routing and evidence | Add task/reminder/deadline/calendar/schedule/free-time keyword rules with ambiguity tests against existing domains. Keep one domain per plan. Use a synthetic fake checked against saved server schemas, tighter local bounds, and fixed-date evaluation cases; evaluations execute no writes |
+
+The injected-argument contract must be ready before registering task writes.
+Do not simply add `request_key` to the planner schema to satisfy today's tool
+check. Keep read-derived arguments explicit: the present planner does not consume
+earlier step results, so availability-dependent writes require a specified data
+flow or separate read then approved request, not an implicit replanning feature.
+
+### Phase 14: Discord decision channel
+
+Depends on the shared Discord service's published card/press contract, including
+authentication, owner identity and delivery semantics. It can follow remediation
+without waiting for the tasks domain; the service is an external prerequisite,
+not something Conductor implements. Split channel contracts, card delivery and
+press handling into small specs once that prerequisite exists.
+
+- The shared service owns the bot token and Gateway connection. Conductor posts
+  cards through its loopback interface and receives forwarded presses on
+  loopback; Conductor runs no bot and makes no direct Discord connection.
+- Cards represent both `ApprovalRequest` and `Escalation`, with the summary and
+  exact arguments covered by the decision. Approval cards offer Approve/Reject;
+  escalation cards offer Retry/Cancel. Edits stay in the terminal or web page.
+- Add `discord` to the closed decision-channel contract (currently terminal/web),
+  preserving compatibility with stored decisions. Every authenticated press also
+  checks the owner's Discord user id before calling `conductor.decisions`.
+- All three channels use the same store, policy revalidation and stale-steps
+  digest. Test cross-channel races, repeated/old presses and non-owner presses;
+  only the first valid decision wins. Resumes retain existing lease protection.
+- Before implementation, update `AGENTS.md` and the architecture's network and
+  privacy boundaries for this precise service interface and card payload. The
+  existing loopback-only approvals page/model rules do not silently authorize a
+  new HTTP client or sending sensitive arguments to Discord. Specify which exact
+  arguments may leave the machine and refuse unsupported payloads; never send
+  whole event logs, prompts, model replies or unrelated calendar/finance results.
+- Pin safe card rendering of untrusted text, bounded payloads, authenticated
+  callback refusal and service-unavailable behavior against fakes. Delivery retries
+  must not record an approval or execute a step. No live Discord in acceptance.
+
+This phase supersedes the old waiting-approval phone-notification backlog item:
+the card is both notification and decision surface. It does not reopen the
+already completed terminal/web phases or move tasks writes into the finance
+proposal model. Exact service endpoints, card limits and callback authentication
+are prerequisites to settle from the owning service contract, not guessed here.
+
 ## Backlog
 
-- A notification when an approval is waiting (phone push), once the approvals page exists.
 - Moving to the Mac Studio: model choices per decision point, re-run the evaluation harness, compare consistency.
