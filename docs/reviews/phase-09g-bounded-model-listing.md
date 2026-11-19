@@ -1,16 +1,16 @@
 # Review: Phase 9g
 
-- Verdict: FAIL
+- Verdict: PASS
 - Passed: 1222
-- Findings: 1
-- Approved deviations: None
-- For the architect: G6 and G7 are empty because 935a263 is already committed; the four existing-test diffs against its parent match the spec. S2, S3 and S4 one-line digests were truncated; -vv matched Broken.
+- Findings: 0
+- Approved deviations: A no_digest entry keeps a valid capabilities list. An absent or invalid capabilities value is still empty.
+- For the architect: S1-S11 reused from review 1 (bytes unchanged since 935a263). G6 and G7 empty because committed; against 4e5d928 the four numstat lines match, and the stat also includes the architect skill files.
 
 ## Findings
 
-R4 | src/conductor/llm/tags.py:113 | expected capabilities () when the digest does not match | found a valid capabilities list is kept
+None
 
-Parts that needed a repair: the no_digest capabilities result
+Parts that needed a repair: none
 
 Built beyond the spec: none
 
@@ -24,14 +24,14 @@ G7: empty
 G8: 1
 G9: Reports OK.
 searches: silent
-S1 fails: OllamaBadAnswer: unexpected answer
-S2 fails: first Listed kept, problem None
-S3 fails: uppercase digest kept, problem None
-S4 fails: problem bad_capabilities
-S5 fails: assert 'plain:latest' == 'plain'
-S6 fails: DID NOT RAISE TooLarge
-S7 fails: TooLarge: answer too large
-S8 fails: 'bad_answer' vs 'too_large'
-S9 fails: DID NOT RAISE ModelUnavailable
-S10 fails: assert [] == ['FAIL  ollama...']
-S11 fails: FAIL not pulled vs ok digest
+S1 fails: OllamaBadAnswer: unexpected answer (reused)
+S2 fails: first Listed kept, problem None (reused)
+S3 fails: uppercase digest kept, problem None (reused)
+S4 fails: problem bad_capabilities (reused)
+S5 fails: assert 'plain:latest' == 'plain' (reused)
+S6 fails: DID NOT RAISE TooLarge (reused)
+S7 fails: TooLarge: answer too large (reused)
+S8 fails: 'bad_answer' vs 'too_large' (reused)
+S9 fails: DID NOT RAISE ModelUnavailable (reused)
+S10 fails: assert [] == ['FAIL  ollama...'] (reused)
+S11 fails: FAIL not pulled vs ok digest (reused)
