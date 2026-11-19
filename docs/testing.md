@@ -39,6 +39,7 @@ A bug here lets the agent act without approval, lose its record, or accept outpu
 - `planning/plan.py` (the planner's schema from the registry, and every way planning escalates; Phase 5b)
 - `planning/answer.py` (the reply from the results, and every way it escalates; Phase 5b)
 - `graph/supervisor.py` (no step with a side effect runs without its own approval; Phase 5c)
+- `graph/status.py` (validated checkpoint status and safe refusals; Phase 9e)
 - `runtime.py` (one process per thread at a time, and private checkpoint files; Phase 5d)
 - `mcp_client/client.py` (what a tool server receives, and every way it can fail; Phase 6a)
 - `mcp_client/check.py` (a tool action runs only on the tool it says, and a `read` action only on a read-only tool; Phase 6b)

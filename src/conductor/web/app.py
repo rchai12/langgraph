@@ -15,6 +15,7 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 from conductor import domains, runtime
 from conductor.config import Settings
 from conductor.decisions import answer_escalation, decide_approval, parse_json_object
+from conductor.graph.status import RunStateUnavailable
 from conductor.graph.supervisor import RunError
 from conductor.policy import DecisionRefused
 from conductor.registry import NotRegistered, Registry
@@ -325,8 +326,9 @@ def create_app(settings: Settings, *, resumer: Resumer | None = None) -> ASGIApp
         if _ID.fullmatch(run_id) is None:
             return PlainTextResponse(_NOT_FOUND, status_code=404)
         try:
-            with runtime.open_runtime(settings) as opened:
-                found = runtime.state(opened, run_id)
+            found = runtime.read_state(settings, run_id)
+        except RunStateUnavailable:
+            return PlainTextResponse("The run state is not available", status_code=503)
         except RunError:
             return PlainTextResponse(_NOT_FOUND, status_code=404)
         return _page(

@@ -13,6 +13,7 @@ routing/route.py
 planning/plan.py
 planning/answer.py
 graph/supervisor.py
+graph/status.py
 runtime.py
 mcp_client/client.py
 mcp_client/check.py

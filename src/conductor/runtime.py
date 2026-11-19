@@ -12,7 +12,8 @@ from conductor import domains, ids
 from conductor.config import Settings
 from conductor.contracts import Contract
 from conductor.domains import demo
-from conductor.events import EventLog, JsonValue
+from conductor.events import EventLog, JsonValue, check_run_id
+from conductor.graph.status import RunStateUnavailable, checkpoint_state
 from conductor.graph.supervisor import (
     RunError,
     RunState,
@@ -206,7 +207,9 @@ def ask(runtime: Runtime, request: str) -> RunState:
     check_tools(runtime)
     run_id = ids.new_id()
     runtime.store.acquire(run_id, runtime.holder)
-    return _call(runtime, run_id, lambda: start_run(runtime.graph, request, run_id=run_id))
+    return _call(
+        runtime, run_id, lambda: start_run(runtime.graph, request, run_id=run_id, log=runtime.log)
+    )
 
 
 def resume(runtime: Runtime, run_id: str) -> RunState:
@@ -220,6 +223,41 @@ def resume(runtime: Runtime, run_id: str) -> RunState:
 
 def state(runtime: Runtime, run_id: str) -> RunState:
     return run_state(runtime.graph, run_id)
+
+
+def read_state(settings: Settings, run_id: str) -> RunState:
+    check_run_id(run_id)
+    path = settings.checkpoints_path
+    if not path.exists():
+        raise RunError(f"no run {run_id}")
+    try:
+        connection = sqlite3.connect(path.as_uri() + "?mode=ro", uri=True, check_same_thread=False)
+    except Exception:
+        raise RunStateUnavailable(f"run {run_id} state is not available") from None
+    outcome: RunState | BaseException
+    try:
+        try:
+            connection.execute("BEGIN")
+            saver = SqliteSaver(connection)
+            saver.is_setup = True
+            try:
+                saved = saver.get_tuple(
+                    {"configurable": {"thread_id": run_id, "checkpoint_ns": ""}}
+                )
+            except Exception:
+                raise RunStateUnavailable(f"run {run_id} state is not available") from None
+            outcome = checkpoint_state(saved, run_id)
+        except Exception as error:
+            outcome = error
+    finally:
+        try:
+            connection.close()
+        except Exception:
+            if not isinstance(outcome, Exception):
+                outcome = RunStateUnavailable(f"run {run_id} state is not available")
+    if isinstance(outcome, Exception):
+        raise outcome
+    return outcome
 
 
 def _call(runtime: Runtime, run_id: str, call: Callable[[], RunState]) -> RunState:

@@ -235,3 +235,12 @@ The coding agent appends one entry per phase, in the form `docs/phase-convention
   - None
 - Follow-ups:
   - None
+
+## Phase 9e: runtime ownership and status reads (2026-11-18)
+- Tests: 1006 -> 1096 (given 30)
+- New public names: `graph.status`: `NODES`, `RunStatus`, `RunError`, `RunState`, `RunStateUnavailable`, `checkpoint_state`; `runtime`: `read_state`
+- Changed files: 19
+- Deviations:
+  - None
+- Follow-ups:
+  - None

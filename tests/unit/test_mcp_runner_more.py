@@ -114,11 +114,12 @@ def _detail(folder: Path, error: StepFailed) -> str:
 
 def _start(folder: Path, registry: Registry, runner: object):
     store = Store(folder / "conductor.db")
+    log = EventLog(folder / "runs")
     graph = build_graph(
         Services(
             registry=registry,
             store=store,
-            log=EventLog(folder / "runs"),
+            log=log,
             model=ScriptedModel([ScriptedReply("plan", ModelReply(content=ECHO_PLAN))]),
             model_name="test-model:1b",
             runner=runner,  # type: ignore[arg-type]
@@ -126,7 +127,7 @@ def _start(folder: Path, registry: Registry, runner: object):
         InMemorySaver(),
     )
     request = "lab: go" if registry.names == ("lab",) else "demo: hi"
-    return start_run(graph, request, run_id="f" * 32)
+    return start_run(graph, request, run_id="f" * 32, log=log)
 
 
 def _spend(outcome: ToolOutcome | McpUnavailable):

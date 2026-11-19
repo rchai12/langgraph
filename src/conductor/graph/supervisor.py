@@ -12,8 +12,16 @@ from pydantic import ValidationError
 from conductor import plancheck, policy
 from conductor.contracts import Contract, Escalation, FieldProblem, Plan, Route, problems_from
 from conductor.contracts.approvals import ApprovalDecision, ApprovalRequest, EscalationAnswer
-from conductor.events import EventKind, EventLog, JsonValue
+from conductor.events import EventKind, EventLog, JsonValue, check_run_id
 from conductor.graph import tracing_off
+from conductor.graph.status import (  # noqa: F401
+    NODES,
+    RunError,
+    RunState,
+    RunStateUnavailable,
+    RunStatus,
+    checkpoint_state,
+)
 from conductor.llm.model import Model
 from conductor.planning.answer import Answered, StepOutcome, answer_request
 from conductor.planning.plan import Planned, plan_request
@@ -21,21 +29,8 @@ from conductor.registry import Action, Registry
 from conductor.routing.route import REQUEST_MESSAGE, Routed, route_request
 from conductor.store import Store
 
-NODES = (
-    "route",
-    "plan",
-    "ask_plan",
-    "ask_step",
-    "wait_approval",
-    "run_step",
-    "answer",
-    "record_escalation",
-    "wait_escalation",
-    "finish",
-)
 RECURSION_LIMIT = 100
 RESUMABLE_STOPS = ("route", "plan", "answer")
-RunStatus = Literal["waiting", "done", "rejected", "cancelled", "stopped"]
 STEP_FAILED_DETAIL = "the step failed"
 RESULT_DETAIL = "the result does not fit the action"
 FAILURE_CODES = (
@@ -70,10 +65,6 @@ class StepRunner(Protocol):
     def run(self, action: Action, args: Contract) -> dict[str, JsonValue]: ...
 
 
-class RunError(Exception):
-    pass
-
-
 @dataclass(frozen=True)
 class Services:
     registry: Registry
@@ -82,17 +73,6 @@ class Services:
     model: Model
     model_name: str
     runner: StepRunner
-
-
-@dataclass(frozen=True)
-class RunState:
-    run_id: str
-    status: RunStatus
-    approval_id: str | None = None
-    escalation_id: str | None = None
-    reply: str | None = None
-    note: str = ""
-    stopped_at: str | None = None
 
 
 class State(TypedDict, total=False):
@@ -112,9 +92,6 @@ class State(TypedDict, total=False):
     note: str
 
 
-_SERVICES: dict[int, Services] = {}
-
-
 def build_graph(services: Services, checkpointer: BaseCheckpointSaver) -> CompiledStateGraph:
     graph = StateGraph(State)
     graph.add_node("route", _route(services))
@@ -129,17 +106,15 @@ def build_graph(services: Services, checkpointer: BaseCheckpointSaver) -> Compil
     graph.add_node("finish", _finish(services))
     graph.add_edge(START, "route")
     graph.add_edge("finish", END)
-    compiled = graph.compile(checkpointer=checkpointer)
-    _SERVICES[id(compiled)] = services
-    return compiled
+    return graph.compile(checkpointer=checkpointer)
 
 
-def start_run(graph: CompiledStateGraph, request: str, *, run_id: str) -> RunState:
+def start_run(graph: CompiledStateGraph, request: str, *, run_id: str, log: EventLog) -> RunState:
     if not request.strip() or len(request) > 2000:
         raise ValueError(REQUEST_MESSAGE)
     if graph.get_state(_config(run_id)).created_at is not None:
         raise RunError(f"run {run_id} already exists")
-    _SERVICES[id(graph)].log.append(run_id, EventKind.RUN_STARTED, payload={"request": request})
+    log.append(run_id, EventKind.RUN_STARTED, payload={"request": request})
     _invoke(graph, {"request": request}, run_id)
     return run_state(graph, run_id)
 
@@ -167,23 +142,14 @@ def resume_run(graph: CompiledStateGraph, store: Store, run_id: str) -> RunState
 
 
 def run_state(graph: CompiledStateGraph, run_id: str) -> RunState:
-    snapshot = graph.get_state(_config(run_id))
-    if snapshot.created_at is None:
-        raise RunError(f"no run {run_id}")
-    if snapshot.interrupts:
-        value = snapshot.interrupts[0].value
-        if "approval_id" in value:
-            return RunState(run_id=run_id, status="waiting", approval_id=value["approval_id"])
-        return RunState(run_id=run_id, status="waiting", escalation_id=value["escalation_id"])
-    if snapshot.next:
-        return RunState(run_id=run_id, status="stopped", stopped_at=snapshot.next[0])
-    values = snapshot.values
-    return RunState(
-        run_id=run_id,
-        status=cast(RunStatus, values["status"]),
-        reply=cast(str | None, values.get("reply")),
-        note=cast(str, values.get("note") or ""),
-    )
+    check_run_id(run_id)
+    try:
+        saved = graph.checkpointer.get_tuple(
+            {"configurable": {"thread_id": run_id, "checkpoint_ns": ""}}
+        )
+    except Exception:
+        raise RunStateUnavailable(f"run {run_id} state is not available") from None
+    return checkpoint_state(saved, run_id)
 
 
 def _config(run_id: str) -> dict[str, object]:

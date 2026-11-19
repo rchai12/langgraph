@@ -1,4 +1,3 @@
-from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -193,12 +192,7 @@ def test_finished_runs_show_their_line(monkeypatch: pytest.MonkeyPatch) -> None:
         "5" * 32: RunState(run_id="5" * 32, status="waiting", escalation_id="e" * 32),
     }
 
-    @contextmanager
-    def open_runtime(settings: object, *, model: object = None) -> object:
-        yield None
-
-    monkeypatch.setattr(runtime, "open_runtime", open_runtime)
-    monkeypatch.setattr(runtime, "state", lambda opened, run_id: states[run_id])
+    monkeypatch.setattr(runtime, "read_state", lambda settings, run_id: states[run_id])
     page = _page()
     done = page.get(f"/runs/{'1' * 32}").text
     assert "done" in done

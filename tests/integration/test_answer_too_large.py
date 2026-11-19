@@ -47,7 +47,7 @@ def test_a_too_large_answer_waits_for_the_person_and_can_be_cancelled(tmp_path: 
         ),
         InMemorySaver(),
     )
-    state = start_run(graph, "demo: say hi", run_id=RUN)
+    state = start_run(graph, "demo: say hi", run_id=RUN, log=log)
     assert state.status == "waiting" and state.escalation_id is not None
     stored = store.escalation(state.escalation_id).escalation
     assert stored.kind == "answer_too_large"

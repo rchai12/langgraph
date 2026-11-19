@@ -86,7 +86,7 @@ class World:
         )
 
     def start(self, request: str) -> RunState:
-        return start_run(self.graph, request, run_id=RUN)
+        return start_run(self.graph, request, run_id=RUN, log=self.log)
 
     def resume(self) -> RunState:
         return resume_run(self.graph, self.store, RUN)
