@@ -15,7 +15,7 @@ def _open(settings: object, *, model: object = None) -> object:
     yield None
 
 
-def test_a_second_start_waits_and_the_thread_is_not_a_daemon(monkeypatch) -> None:
+def test_a_second_start_waits_and_the_thread_is_a_daemon(monkeypatch) -> None:
     started = threading.Event()
     release = threading.Event()
     calls: list[tuple[str, bool]] = []
@@ -32,7 +32,7 @@ def test_a_second_start_waits_and_the_thread_is_not_a_daemon(monkeypatch) -> Non
         resumer.start(RUN)
         assert started.wait(5)
         resumer.start(RUN)
-        assert calls == [(RUN, False)]
+        assert calls == [(RUN, True)]
         assert resumer.running(RUN) is True
         assert resumer.running("b" * 32) is False
         assert resumer.error("b" * 32) is None

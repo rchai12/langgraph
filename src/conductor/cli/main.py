@@ -37,6 +37,7 @@ from conductor.store import (
 )
 from conductor.views import escalation_lines, request_lines
 from conductor.web.app import create_app
+from conductor.web.jobs import UNFINISHED_MESSAGE, Resumer
 
 app = typer.Typer(no_args_is_help=True, add_completion=False)
 runs_app = typer.Typer(no_args_is_help=True, add_completion=False)
@@ -449,14 +450,19 @@ def web() -> None:
     finally:
         probe.close()
     typer.echo(f"Serving on http://127.0.0.1:{port}/")
-    uvicorn.run(
-        create_app(settings),
-        host="127.0.0.1",
-        port=port,
-        server_header=False,
-        proxy_headers=False,
-        log_level="warning",
-    )
+    resumer = Resumer(settings)
+    try:
+        uvicorn.run(
+            create_app(settings, resumer=resumer),
+            host="127.0.0.1",
+            port=port,
+            server_header=False,
+            proxy_headers=False,
+            log_level="warning",
+        )
+    finally:
+        for run_id in resumer.close():
+            typer.echo(f"{UNFINISHED_MESSAGE}: run {run_id}", err=True)
 
 
 def _case_files(given: str) -> list[Path]:
