@@ -85,6 +85,7 @@ Scratch work lives in the session scratchpad: the `fail<NN>` clone (given files 
 ### 5. Probe
 
 18. Write the probe as the given file `docs/verification/probe-NNx.py` in the clone, starting from `probe_skeleton.py`. The oracle is built from its own tables only, never from the code under test. It checks itself on known cases (`assert` lines) first. Random inputs are a valid base with at most one change. Each check is wrapped, so an exception prints `FAIL` and the run reaches `FAILURES N`. Import new names inside checks; force important transitions and assert reach counts. Isolate each trial's storage. Header tests send raw requests, not a client that normalises headers.
+    Check the oracle against the spec's tables row by row and field by field before writing the spec: they are two copies of one rule, and a coder can satisfy only one of them if they differ. Give each table row a given test case.
 19. Run the oracle part alone, then the probe on today's code: its new checks must print `FAIL`, and nothing may stop. Keep it lean: it checks what the given tests do not reach.
 
 ### 6. Spot checks (on paper)

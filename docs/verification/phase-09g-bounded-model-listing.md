@@ -2,6 +2,10 @@
 
 Spec: `docs/phases/phase-09g-bounded-model-listing.md`. Follow `docs/phase-conventions.md` ("For the verifier") for the procedure and the verdict. Write only `docs/reviews/phase-09g-bounded-model-listing.md`.
 
+## Correction 1 (2026-11-19): re-review only
+
+Spec correction 1 changes one row of the entry table: a `no_digest` entry keeps a valid capabilities list, as the probe's oracle always did. Review 1's only finding (R4, `tags.py:113`) is therefore withdrawn, and the coder's deviation is allowed. No code changed after review 1 (implementation 935a263). Run `.venv/bin/python scripts/accept.py --phase 9g --guide` again. G6 and G7 print nothing because the work is committed. Judge them instead by `git diff 4e5d928 --numstat -- tests/unit/test_ollama.py tests/unit/test_ollama_more.py tests/e2e/test_cli_doctor.py tests/unit/test_diagnostics_more.py` (G6's four lines) and `git diff 4e5d928 --stat` (only Scope paths), which may also show the review and the spec and guide that this correction changed. You may carry review 1's spot-check lines S1 to S11 forward: the reviewed bytes are unchanged, so say they are reused. Confirm R4 by reading `parse_tags` against the corrected table. Overwrite the review.
+
 ## First: establish that the coder ran
 
 - No `## Phase 9g: ` entry in `docs/progress.md` and no Scope path changed: the coder did not run. Report it to the owner and write no review.

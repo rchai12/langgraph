@@ -1,5 +1,9 @@
 # Phase 9g: One bounded Ollama model listing
 
+## Corrections
+
+**2026-11-19, correction 1 (a spec error, not the coder's).** The entry table said a `no_digest` entry has capabilities `()`. The given probe's oracle (`oracle_listing` in `docs/verification/probe-09g.py`) keeps a valid capabilities list on such an entry. The two contradicted each other, and the coder followed the probe and recorded it as a deviation. The probe is right: each field of an entry is judged alone. The table row now reads: `digest` missing or not matching gives digest `None`, the capabilities by the same rule as a valid entry (sorted strings, or `()` when absent or invalid), and problem `"no_digest"`. Callers do not notice the change: a run refuses any entry with a problem, and doctor prints only the problem's text. The committed implementation (935a263) already does this. No code, test or given file changes, and N and the given count stay `1184` and 34. Only the review is live again. The implementation is committed, so the Acceptance rows for `git diff HEAD --numstat` and `git status` print nothing. Judge them against the spec's commit instead: `git diff 4e5d928 --numstat -- <the four files>` for the numstat row, and `git diff 4e5d928 --stat` for Scope, which may also show the review and the spec and guide that this correction changed.
+
 ## Goal
 
 `conductor doctor` and a run read Ollama's `/api/tags` listing through one parser in `conductor.llm.tags`, so they agree on the configured model. A malformed entry for another model no longer breaks the listing; it is skipped, or marked as a problem on that entry alone. Every read of a tags or chat answer is capped at 1 MiB, also when the answer sends no length or a false one. A run then escalates with the new code `too_large`, and doctor prints `answer too large`. This implements audit findings 2 (inconsistent tags parsing) and 9 (uncapped response reads).
@@ -133,7 +137,7 @@ One named entry gives:
 |---|---|---|---|
 | `digest` is a string matching `^[0-9a-f]{64}$`, `capabilities` absent | that string | `()` | `None` |
 | as above, `capabilities` a list of strings | that string | the strings sorted, repeats kept | `None` |
-| `digest` missing or not matching (uppercase, 63 characters, a number) | `None` | `()` | `"no_digest"` |
+| `digest` missing or not matching (uppercase, 63 characters, a number) | `None` | as the rows above: the sorted strings, or `()` when absent or not a list of strings | `"no_digest"` |
 | a valid `digest`, `capabilities` present but not a list of strings | that string | `()` | `"bad_capabilities"` |
 
 `no_digest` wins over `bad_capabilities`: an entry with both faults is `Listed(name, None, (), "no_digest")`. Keys other than `name`, `digest` and `capabilities` are ignored.
