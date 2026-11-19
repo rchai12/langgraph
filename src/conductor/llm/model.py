@@ -3,7 +3,9 @@ from typing import Literal, Protocol
 
 from conductor.llm.points import ModelRequest
 
-UnavailableCode = Literal["unreachable", "timeout", "http_error", "bad_answer", "not_installed"]
+UnavailableCode = Literal[
+    "unreachable", "timeout", "http_error", "bad_answer", "not_installed", "too_large"
+]
 
 
 class ModelUnavailable(Exception):

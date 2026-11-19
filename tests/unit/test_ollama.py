@@ -58,8 +58,8 @@ def test_a_model_that_is_not_installed(name: str) -> None:
     "body",
     [
         b"not json",
-        json.dumps({"models": [{**QWEN, "digest": "4" * 63}]}).encode(),
-        json.dumps({"models": [PLAIN, {**QWEN, "capabilities": "thinking"}]}).encode(),
+        json.dumps({"models": [{**PLAIN, "digest": "a" * 63}]}).encode(),
+        json.dumps({"models": [QWEN, {**PLAIN, "capabilities": "thinking"}]}).encode(),
     ],
 )
 def test_tags_that_do_not_fit(body: bytes) -> None:

@@ -20,7 +20,11 @@ def test_a_bad_digest_is_missing_and_a_latest_tag_is_shown(
             }
         ).encode()
         found = fetch_models(host)
-    assert found == {"plain:latest": None, "numbered:latest": None, "upper:latest": None}
+    assert {name: item.digest for name, item in found.items()} == {
+        "plain:latest": None,
+        "numbered:latest": None,
+        "upper:latest": None,
+    }
     digest = "cd" * 32
     with fake_ollama() as (fake, host):
         fake.body = json.dumps({"models": [{"name": "coder:latest", "digest": digest}]}).encode()

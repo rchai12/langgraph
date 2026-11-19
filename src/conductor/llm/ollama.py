@@ -1,13 +1,14 @@
 import json
-import re
 import urllib.error
 import urllib.request
 from http.client import HTTPException
+from typing import cast
 
+from conductor.llm import tags
 from conductor.llm.model import ModelInfo, ModelReply, ModelUnavailable
 from conductor.llm.points import ModelRequest
+from conductor.llm.tags import TooLarge
 
-_DIGEST = re.compile(r"^[0-9a-f]{64}$")
 _COUNTS = (
     ("total_duration", "total_ns"),
     ("load_duration", "load_ns"),
@@ -25,7 +26,16 @@ class OllamaModel:
         self._opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 
     def model_info(self, name: str) -> ModelInfo:
-        return _info(self._read("/api/tags"), name)
+        try:
+            listed = tags.parse_tags(self._read("/api/tags"))
+        except tags.OllamaBadAnswer:
+            raise ModelUnavailable("bad_answer") from None
+        found = tags.find_model(listed, name)
+        if found is None:
+            raise ModelUnavailable("not_installed")
+        if found.problem is not None:
+            raise ModelUnavailable("bad_answer")
+        return ModelInfo(found.name, cast(str, found.digest), found.capabilities)
 
     def chat(self, request: ModelRequest) -> ModelReply:
         payload = json.dumps(request.body(), ensure_ascii=False).encode("utf-8")
@@ -36,7 +46,9 @@ class OllamaModel:
         outgoing = urllib.request.Request(f"{self._host}{path}", data=payload, headers=headers)
         try:
             with self._opener.open(outgoing, timeout=self._timeout) as response:
-                return response.read()
+                return tags.read_capped(response)
+        except TooLarge:
+            raise ModelUnavailable("too_large") from None
         except urllib.error.HTTPError as error:
             if path == "/api/chat" and error.code == 404:
                 raise ModelUnavailable("not_installed") from None
@@ -61,54 +73,6 @@ def _object(body: bytes) -> dict[str, object]:
     if not isinstance(data, dict):
         raise ModelUnavailable("bad_answer")
     return data
-
-
-def _info(body: bytes, name: str) -> ModelInfo:
-    models = _object(body).get("models")
-    if not isinstance(models, list):
-        raise ModelUnavailable("bad_answer")
-    entries = [_entry(item) for item in models]
-    found = _find(entries, name)
-    if found is None:
-        raise ModelUnavailable("not_installed")
-    model_name, digest, capabilities = found
-    return ModelInfo(model_name, digest, capabilities)
-
-
-def _entry(item: object) -> tuple[str, str, tuple[str, ...]]:
-    if not isinstance(item, dict):
-        raise ModelUnavailable("bad_answer")
-    name = item.get("name")
-    digest = item.get("digest")
-    if (
-        not isinstance(name, str)
-        or not isinstance(digest, str)
-        or _DIGEST.fullmatch(digest) is None
-    ):
-        raise ModelUnavailable("bad_answer")
-    return name, digest, _capabilities(item)
-
-
-def _capabilities(item: dict[str, object]) -> tuple[str, ...]:
-    if "capabilities" not in item:
-        return ()
-    raw = item["capabilities"]
-    if not isinstance(raw, list) or any(not isinstance(part, str) for part in raw):
-        raise ModelUnavailable("bad_answer")
-    return tuple(sorted(raw))
-
-
-def _find(
-    entries: list[tuple[str, str, tuple[str, ...]]], name: str
-) -> tuple[str, str, tuple[str, ...]] | None:
-    latest = None if ":" in name else f"{name}:latest"
-    found: tuple[str, str, tuple[str, ...]] | None = None
-    for model_name, digest, capabilities in entries:
-        if model_name == name:
-            return model_name, digest, capabilities
-        if model_name == latest:
-            found = (model_name, digest, capabilities)
-    return found
 
 
 def _reply(body: bytes) -> ModelReply:

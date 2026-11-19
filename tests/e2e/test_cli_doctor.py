@@ -54,7 +54,7 @@ def test_ollama_not_running(tmp_path: Path) -> None:
         (200, b"<html>not ollama</html>"),
         (500, b'{"models": []}'),
         (200, b'{"models": "qwen3.8:27b"}'),
-        (200, b'{"models": [{"model": "qwen3.8:27b"}]}'),
+        (200, b'[{"model": "qwen3.8:27b"}]'),
     ],
 )
 def test_something_else_answering(

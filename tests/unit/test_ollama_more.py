@@ -75,7 +75,7 @@ def test_a_tagged_name_does_not_match_latest_and_bad_tags_are_refused() -> None:
         )
         fake.body = json.dumps({"models": "x"}).encode()
         assert text(lambda: model.model_info("plain")) == BAD
-        fake.body = json.dumps({"models": [{"name": 3, "digest": "a" * 64}]}).encode()
+        fake.body = json.dumps({"models": [PLAIN, PLAIN]}).encode()
         assert text(lambda: model.model_info("plain")) == BAD
 
 
@@ -128,7 +128,7 @@ def test_answers_outside_the_documented_shape() -> None:
         fake.chat_body = b"[]"
         assert text(lambda: model.chat(request())) == BAD
         shapes = (
-            {"models": ["x"]},
+            {"models": [{"name": "plain:latest"}]},
             {"models": [{"name": "plain:latest", "digest": 1}]},
             {
                 "models": [

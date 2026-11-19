@@ -253,3 +253,12 @@ The coding agent appends one entry per phase, in the form `docs/phase-convention
   - None
 - Follow-ups:
   - None
+
+## Phase 9g: One bounded Ollama model listing (2026-11-19)
+- Tests: 1184 -> 1222 (given 34)
+- New public names: llm.tags: MAX_BODY_BYTES, UNEXPECTED_MESSAGE, UNREACHABLE_MESSAGE, TOO_LARGE_MESSAGE, Problem, TooLarge, Listed, parse_tags, find_model, read_capped
+- Changed files: 10
+- Deviations:
+  - A no_digest entry keeps a valid capabilities list. An absent or invalid capabilities value is still empty.
+- Follow-ups:
+  - None

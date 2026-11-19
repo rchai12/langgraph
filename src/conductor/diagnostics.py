@@ -61,19 +61,23 @@ def check_ollama(host: str, model: str) -> list[Check]:
             Check("FAIL", ollama_name, str(error)),
             Check("SKIP", model_name, "needs ollama"),
         ]
-    wanted = model if ":" in model else f"{model}:latest"
-    if wanted not in listed:
+    found = tags.find_model(listed, model)
+    if found is None:
         return [
             Check("ok", ollama_name),
             Check("FAIL", model_name, f"not pulled (run: ollama pull {model})"),
         ]
-    digest = listed[wanted]
-    if digest is None:
+    if found.problem is None:
         return [
             Check("ok", ollama_name),
-            Check("FAIL", model_name, "listed without a valid digest"),
+            Check("ok", model_name, f"digest {found.digest[:12]}"),
         ]
-    return [Check("ok", ollama_name), Check("ok", model_name, f"digest {digest[:12]}")]
+    detail = {
+        "no_digest": "listed without a valid digest",
+        "bad_capabilities": "listed with invalid capabilities",
+        "duplicate": "listed more than once",
+    }[found.problem]
+    return [Check("ok", ollama_name), Check("FAIL", model_name, detail)]
 
 
 def run_checks(settings: Settings) -> list[Check]:
