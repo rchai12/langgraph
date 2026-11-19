@@ -27,6 +27,7 @@ _BUILT_MESSAGE = "expected `Built beyond the spec: <what or none>`"
 _PASS_FINDINGS_MESSAGE = "a PASS review has no findings"
 _FAIL_FINDINGS_MESSAGE = "a FAIL review lists at least one finding"
 PHASE_MESSAGE = "phase must be a phase id such as 5a"
+ENTRY_MESSAGE = "the entry does not match the progress form"
 
 _HEADING = re.compile(r"^## Phase ([1-9][0-9]*[a-z]?): (.+) \(([0-9]{4}-[0-9]{2}-[0-9]{2})\)$")
 _TESTS = re.compile(r"^- Tests: ([0-9]+) -> ([0-9]+) \(given ([0-9]+)\)$")
@@ -120,6 +121,48 @@ def parse_progress(
             entry, index = outcome
             entries.append(entry)
     return entries, problems
+
+
+def format_entry(entry: ProgressEntry) -> str:
+    when = entry.date.isoformat()
+    return (
+        f"## Phase {entry.phase}: {entry.title} ({when})\n"
+        f"- Tests: {entry.tests_before} -> {entry.tests_after} (given {entry.given})\n"
+        f"- New public names: {entry.new_names}\n"
+        f"- Changed files: {entry.changed_files}\n"
+        "- Deviations:\n"
+        f"{_list_lines(entry.deviations)}"
+        "- Follow-ups:\n"
+        f"{_list_lines(entry.follow_ups)}"
+    )
+
+
+def put_entry(text: str, entry: ProgressEntry) -> str:
+    """Append the entry, or replace this phase's own entry; refuse a log that would not parse."""
+    formatted = format_entry(entry)
+    marker = f"## Phase {entry.phase}: "
+    lines = text.splitlines(keepends=True)
+    start = next((index for index, line in enumerate(lines) if line.startswith(marker)), None)
+    if start is None:
+        body = text.rstrip("\n")
+        updated = f"{body}\n\n{formatted}" if body else formatted
+    else:
+        end = next(
+            (index for index in range(start + 1, len(lines)) if lines[index].startswith("## ")),
+            len(lines),
+        )
+        block = formatted + ("\n" if end < len(lines) else "")
+        updated = "".join(lines[:start]) + block + "".join(lines[end:])
+    _entries, problems = parse_progress(updated)
+    if problems:
+        raise ValueError(ENTRY_MESSAGE)
+    return updated
+
+
+def _list_lines(items: tuple[str, ...]) -> str:
+    if not items:
+        return "  - None\n"
+    return "".join(f"  - {item}\n" for item in items)
 
 
 def parse_review(text: str, path: str) -> tuple[Review | None, list[Problem]]:

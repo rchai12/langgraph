@@ -28,8 +28,10 @@ review. The spec's explicit rules take precedence over shared phase defaults.
 Before implementation, identify the full baseline commit and inspect
 `git status --short --untracked-files=all`. The finalized spec and guide must be
 committed and unchanged; inspect `git diff HEAD -- <spec> <guide>`, as well as
-whether those paths are tracked. Given files embedded in Conductor specs are
-copied exactly by the coder; do not switch to tasking's committed-given-file scheme.
+whether those paths are tracked. From Phase 9f, given files and the probe are
+committed with the spec (the architect places them with `phase_tools.py promote`)
+and must be tracked and unchanged too. Phase 9e and earlier specs embed them, and
+the coder copies those blocks exactly.
 
 Use a clean checkout for implementation. When unrelated work exists, prepare a
 fresh local clone in a writable temporary directory from the intended committed
@@ -59,11 +61,14 @@ the spec's `--first <sections>` command for final acceptance. Run the full suite
 and coverage consumers sequentially: they share `.coverage`. Consume coverage
 immediately after the producing check, before another coverage run.
 
-Capture output and actual exit codes in temporary logs. Show concise failures,
-the required `Sections:` table and summary, and retain the full logs. Do not let
-a `tail` or other pipeline hide a failing command's exit code. No `--quiet`,
-`scripts/accept.py`, `scripts/progress.py`, or `scripts/spot_check.py` is provided
-here; tasking's implementations depend on `docket` and different report formats.
+Capture output and actual exit codes in logs. `scripts/check.py --quiet` writes
+each step's output to a log folder and prints the `Sections:` tables, the summary,
+and a failed step's last 20 lines. `scripts/accept.py --phase <id> [--guide]` runs
+a spec's Acceptance table (or a guide's Gates and Searches) in order, prints one
+line per row with its exit code when it is not 0, and keeps each row's log; it
+reports and never judges. `scripts/progress.py` writes the coder's entry in the
+checked form. Do not let a `tail` or other pipeline hide a failing command's exit
+code.
 
 Classify a failure as implementation, specification/test, baseline/scope, or
 environment. Never weaken a test for a sandbox restriction or rewrite a spec to
@@ -74,12 +79,17 @@ are unchanged; identify reused evidence explicitly.
 
 The verifier writes only `docs/reviews/<spec filename>`. Execute mutation checks
 in an isolated scratch copy with its own imports, then compare the reviewed tree
-to its starting state. `spot.py` replaces one exact match and restores it; run it
-with `--root <scratch copy>`. An assertion failure is useful evidence; collection
+to its starting state. `scripts/spot_check.py ... --root <scratch copy>` checks the
+deciding test passes unchanged, replaces one exact match, runs the test with that
+copy's `src` on `PYTHONPATH`, restores the bytes and prints one line; it refuses
+the repository itself. The architect's `spot.py` does the same for a correction.
+An assertion failure is useful evidence; collection
 errors, missing dependencies, and no tests collected are not successful mutations.
 Read the output as well as the exit code.
 
-Probes are embedded in guides, saved outside the repository and run from its root.
+From Phase 9f the probe is the committed given file `docs/verification/probe-NNx.py`,
+run by that path from the root. Phase 9e and earlier guides embed it; save it
+outside the repository and run it from the root.
 Keep their independent oracle distinct from the feature. A failing oracle
 self-check is a specification defect. A mutation that survives can expose weak
 tests; trace the deciding input through every defense before assigning blame.
@@ -119,6 +129,19 @@ Development never operates a real model, MCP service, mailbox or finance dataset
 Do not import finances' no-model rule or tasking's calendar/Keychain policies.
 
 ## Maintenance record
+
+- 2026-11-18: ported the mechanised parts of the tasking workflow. Added
+  `scripts/accept.py`, `scripts/progress.py`, `scripts/spot_check.py` and
+  `check.py --quiet`, with their libraries `conductor.acceptance`,
+  `conductor.spotcheck` and `conductor.reports.put_entry` (all critical, 100%
+  covered); the `.claude/hooks/no_reference_build.py` tripwire (asks the owner
+  before a write into `src/conductor/` in a scratch clone not named `fail*` or
+  `spot*`); the architect's `phase_tools.py` (clone, failcheck, stubcheck,
+  searches with a standing catalog and `--plant auto`, lint, promote); phase-id
+  prompts for the coder and verifier skills, which only the owner invokes; and
+  committed given files and probes from Phase 9f, with templates and conventions
+  to match. Kept Conductor's isolation rules, report schema and Codex entry points.
+  Not ported: tasking's `rehash.py` and `move_inventory.py` (its manifest scheme).
 
 - 2026-11-17: added the three development roles for both clients, baseline and
   correction handoffs, and the AST code map adapted from finances. Retained

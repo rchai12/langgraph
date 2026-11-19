@@ -12,15 +12,13 @@
 
 ## Workflow
 
-1. Commit the spec and its verification guide, so `git status` is clean. Then give the coding agent one phase at a time:
+1. Commit the spec, its verification guide, its given files and its probe, so `git status` is clean. Then give the coding agent one phase at a time, in a fresh session:
 
-   > Read AGENTS.md, docs/architecture.md, docs/testing.md, docs/phase-conventions.md, docs/progress.md, and docs/phases/phase-NN-*.md.
-   > Implement only Phase N. Stop when its acceptance criteria pass, then update docs/progress.md.
+   > /phase-coder NNx
 
-2. Give a second agent the matching guide in `verification/`:
+2. Give a second agent, in another fresh session:
 
-   > Read AGENTS.md, docs/phase-conventions.md, docs/phases/phase-NN-*.md, and docs/verification/phase-NN-*.md.
-   > Follow the verification guide against the current diff. Do not modify files except your report. Report the verdict.
+   > /phase-verifier NNx
 
    The verifier writes its report to `reviews/`, named as the spec is. A FAIL goes back to the coding agent with the verifier's findings.
 3. Commit.

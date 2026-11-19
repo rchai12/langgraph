@@ -1,83 +1,75 @@
 # Verify Phase NNx: <name>
 
-Spec: `docs/phases/phase-NNx-<slug>.md`. Follow `docs/phase-conventions.md` ("For the verifier") for the procedure and the verdict, including running `scripts/check_reports.py --phase NNx` on your own report.
+Spec: `docs/phases/phase-NNx-<slug>.md`. Follow `docs/phase-conventions.md` ("For the verifier") for the procedure and the verdict. Write only `docs/reviews/phase-NNx-<slug>.md`.
 
-**First, check that the coder ran.** If `git status --short` lists none of <the coder's new files or changed modules>, stop. Report under "For the architect" that there is no implementation to verify, and write no review file, because a FAIL review without a progress entry breaks `check_reports.py` on `main`.
+## First: establish that the coder ran
 
-Check the committed baseline and finalized documents as `docs/ai-workflow.md`
-describes. Distinguish a stopped coder, missing implementation, mixed scope and
-environment restrictions from a functional failure. If the phase has no progress
-entry, report the missing handoff without creating an orphan review.
+- No `## Phase NNx: ` entry in `docs/progress.md` and no Scope path changed: the coder did not run. Report it to the owner and write no review.
+- An entry whose first Follow-ups item starts `Stopped:`: write the FAIL review the conventions describe, run the given tests once for `Passed`, and stop.
+- `git ls-files --error-unmatch docs/phases/phase-NNx-<slug>.md docs/verification/phase-NNx-<slug>.md <given files>` must succeed: the gates judge against a committed baseline.
 
 The coder:
 - <what the coder did, one line per part>
 
 ## 1. Gates
 
-N is `{{var:N}}`. Sections: <sections>.
+N is `{{var:N}}`. Given count: {{var:GIVEN}}. `.venv/bin/python scripts/accept.py --phase NNx --guide` runs every gate and search in order and prints one line each; compare each with "Must show".
 
-| Command | Expected |
-|---|---|
-| `.venv/bin/python scripts/check.py --first <sections>` | last line `All checks passed.`; at least {{var:MIN}} passed, 0 failed, 0 skipped, 0 xfailed, no warnings summary; 0 failed on every line of the `Sections:` table |
-| `.venv/bin/python -m coverage report --include="<modules>" --fail-under=100` (right after the check) | exit 0, `TOTAL` at `100%` |
-| `.venv/bin/python -m pytest <given paths> --no-cov` | exactly `{{var:GIVEN_RUN}} passed` |
-| `grep -c "^## Phase NNx: " docs/progress.md` | `1` |
-| `.venv/bin/python scripts/check_reports.py --phase NNx` (before writing your report) | `Reports OK.` |
-| `git diff --stat HEAD -- <protected paths>` | no output |
+| # | Command | Must show |
+|---|---|---|
+| G1 | `.venv/bin/python scripts/check.py --quiet --first <sections>` | last line `All checks passed.`; at least {{var:MIN}} passed, 0 failed, 0 skipped, 0 xfailed; every `Sections:` row 0 failed |
+| G2 | `.venv/bin/python -m coverage report --include='<modules>' --fail-under=100` | exit 0, `TOTAL` at `100%` |
+| G3 | `.venv/bin/python -m pytest <given test paths> --no-cov -q` | `{{var:GIVEN}} passed` |
+| G4 | `.venv/bin/python docs/verification/probe-NNx.py` | every check line starts `ok`; last line `FAILURES 0` |
+| G5 | `git diff HEAD --stat -- <given files> docs/verification/probe-NNx.py <protected paths>` | no output |
+| G6 | `git status --short --untracked-files=all` | only the Scope paths |
+| G7 | `grep -c '^## Phase NNx: ' docs/progress.md` | `1` |
+| G8 | `.venv/bin/python scripts/check_reports.py --phase NNx` | `Reports OK.` |
 
-Searches, each with no output:
-
-1. `git grep --untracked -n -E "<pattern, no \b>" -- <paths>`
-
-## 2. Scope paths
-
-`git status --short` lists only the paths of the spec's Scope table. The given files equal the spec's blocks.
-
-## 3. Requirement checklist
+## 2. Requirement checklist
 
 | Id | How | Pass when |
 |---|---|---|
 | R1 | <named tests; a probe check; a place to read> | <observation> |
 
-## 4. Probe
+The coder's test files cover each bullet of the spec's "Tests to write" with its deciding input. Name the test for each bullet; a missing one is a finding.
 
-Save the probe outside the repository, run it from the repository root with `.venv/bin/python <path>`, then delete it. Every check line must start with `ok`, and the last must be `FAILURES 0`.
+## 3. Probe
 
-It checks:
-- <one line per check>
+The probe is the given file `docs/verification/probe-NNx.py` (G4). It checks:
+- <one line per check the given tests do not reach>
 
-A stop at its `assert` lines is the probe's fault. Report it under "For the architect", not as a finding.
+A stop at its own `assert` lines, before its self-check prints `ok`, is the probe's fault: report it under "For the architect", not as a finding.
 
-{{file:probe_NNx.py}}
+## 4. Searches
 
-## 5. The coder's tests and spot checks
+Each prints nothing. A match is a finding against the rule it names.
 
-The coder's test files cover each bullet of the spec's "Tests to write" with its deciding input. Name the test for each bullet, and report a missing one as a finding.
+```sh
+git grep --untracked -n -E '<pattern, no \b>' -- <paths>
+```
 
-Spot checks run in an isolated scratch copy, using that copy's source through
-`PYTHONPATH`. First confirm the original deciding test passes; make the mutation,
-run with `PYTHONDONTWRITEBYTECODE=1`, `--no-cov` and `-vv`, and confirm it fails for
-the intended reason. Restore the scratch file from its saved bytes. Confirm the
-reviewed tree is unchanged. `spot.py --root <scratch copy>` automates replacement
-and restoration; inspect output because collection errors are not caught mutations.
+## 5. Spot checks
 
-Write down what each broken run printed. A different failure than the "Broken" column is not a finding (note it for the architect), but a test that still passes is.
+Make a scratch copy of the reviewed bytes (`git clone -q . <scratch>/spotNNx`, then copy in the uncommitted Scope files and link `.venv`). For each row run `.venv/bin/python scripts/spot_check.py <module> --old '<old>' --new '<new>' --test '<deciding test>' --row S<n> --root <scratch>/spotNNx`. It runs the test unchanged (it must pass), applies the one exact change, runs it again, restores the bytes, and prints one line. Rerun by hand with `-vv` only when that line is not the "Broken" value.
 
-| # | Change (function) | Deciding test, input | Correct | Broken |
+A different failure from "Broken" is a note for the architect; a pass is a finding unless you trace it to a test that cannot see the change (say which in "For the architect").
+
+| # | Change (function) | Deciding test (full node id) | Correct | Broken |
 |---|---|---|---|---|
-| 1 | <one-line change> | `<test id>` | <traced output> | <traced output> |
+| S1 | <one-line change> | `<test id>` | <traced output> | <traced output> |
 
-Reasonable variations that are correct: <list>.
+## 6. Reasonable variations
 
-## 6. Project rules
-
-- <the searches, and the rules of AGENTS.md this phase touches>
+These are correct even though the spec does not spell them out:
+- Private helpers inside the Scope modules, and extra behaviour tests in `*_more.py` files.
+- <list>
 
 ## 7. Out of scope
 
 Each must be absent:
 - <the spec's Out of scope, one line each>
 
-## 8. Progress log
+## 8. Verdict
 
-The entry exists, headed `## Phase NNx: <name> (...)`, with `Tests: {{var:N}} -> <passed> (given <GIVEN>)`, and each deviation it lists is real and justified.
+Write `docs/reviews/phase-NNx-<slug>.md` in the form `docs/phase-conventions.md` gives (`# Review: Phase NNx`), with a digest: one line per gate, one per spot check, `searches: silent`. Then `.venv/bin/python scripts/check_reports.py --phase NNx` must print `Reports OK.`

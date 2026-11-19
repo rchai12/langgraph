@@ -1,6 +1,9 @@
 """Run everything a phase must pass: lint, format, tests, and the critical coverage gate.
 
-Run it as: .venv/bin/python scripts/check.py [--first A,B | --section NAME]
+Run it as: .venv/bin/python scripts/check.py [--quiet] [--first A,B | --section NAME]
+
+--quiet writes each command's output to a log folder and prints only the Sections tables, the
+summary, and the last 20 lines of a failed step.
 """
 
 import argparse
@@ -158,8 +161,31 @@ def steps(python: str, coverage_json: Path, *, first: list[str] | None = None) -
     return found
 
 
-def run_command(command: list[str], cwd: Path) -> int:
-    return subprocess.run(command, cwd=cwd, check=False).returncode
+def run_command(command: list[str], cwd: Path, log: Path | None = None) -> int:
+    if log is None:
+        return subprocess.run(command, cwd=cwd, check=False).returncode
+    with log.open("wb") as handle:
+        return subprocess.run(
+            command, cwd=cwd, check=False, stdout=handle, stderr=subprocess.STDOUT
+        ).returncode
+
+
+def _quiet_dir(chosen: Path | None) -> Path:
+    folder = chosen if chosen is not None else Path(tempfile.gettempdir()) / "conductor-check"
+    folder.mkdir(parents=True, exist_ok=True)
+    return folder
+
+
+def _log_name(step_name: str) -> str:
+    if step_name in ("lint", "format", "tests"):
+        return f"{step_name}.log"
+    return "tests-first.log"
+
+
+def _show_tail(log: Path) -> None:
+    print(f"Last 20 lines of {log}:")
+    for line in log.read_text(encoding="utf-8", errors="replace").splitlines()[-20:]:
+        print(line)
 
 
 def _critical_coverage(coverage_json: Path) -> bool:
@@ -185,8 +211,13 @@ def _section_names() -> list[str]:
     return [name for name, _ in read_sections(SECTIONS_FILE.read_text(encoding="utf-8"))]
 
 
-def _run_one_section(name: str, run: Callable[[list[str], Path], int]) -> int:
+def _run_one_section(
+    name: str,
+    run: Callable[[list[str], Path, Path | None], int],
+    log_dir: Path | None,
+) -> int:
     files = section_files([name])
+    log = None if log_dir is None else log_dir / "section.log"
     with tempfile.TemporaryDirectory() as folder:
         report_path = Path(folder) / "junit.xml"
         command = [
@@ -198,13 +229,20 @@ def _run_one_section(name: str, run: Callable[[list[str], Path], int]) -> int:
             "--continue-on-collection-errors",
             *files,
         ]
-        code = run(command, ROOT)
+        code = run(command, ROOT, log)
         _print_table(report_path, [name])
+    if log is not None and code != 0:
+        _show_tail(log)
     print(f"Section {name}: {'passed.' if code == 0 else 'FAILED.'}")
+    if log_dir is not None:
+        print(f"Logs: {log_dir}")
     return 0 if code == 0 else 1
 
 
-def main(argv: list[str] | None = None, run: Callable[[list[str], Path], int] = run_command) -> int:
+def main(
+    argv: list[str] | None = None,
+    run: Callable[[list[str], Path, Path | None], int] = run_command,
+) -> int:
     names = _section_names()
     parser = argparse.ArgumentParser(description="Run every check a phase must pass.")
     exclusive = parser.add_mutually_exclusive_group()
@@ -218,9 +256,20 @@ def main(argv: list[str] | None = None, run: Callable[[list[str], Path], int] = 
         metavar="A[,B…]",
         help="Run these sections first; the full check only once they pass.",
     )
+    parser.add_argument(
+        "--quiet",
+        action="store_true",
+        help="Write command output to logs; print only the tables, the summary and failures.",
+    )
+    parser.add_argument(
+        "--log-dir",
+        type=Path,
+        help="Log folder for --quiet (default: conductor-check in the temporary directory).",
+    )
     options = parser.parse_args(argv)
+    log_dir = _quiet_dir(options.log_dir) if options.quiet else None
     if options.section is not None:
-        return _run_one_section(options.section, run)
+        return _run_one_section(options.section, run, log_dir)
     first: list[str] | None = None
     if options.first is not None:
         first = options.first.split(",")
@@ -234,17 +283,23 @@ def main(argv: list[str] | None = None, run: Callable[[list[str], Path], int] = 
         planned = steps(sys.executable, coverage_json, first=first)
         failed = None
         for step in planned:
-            print(f"== {step.name}", flush=True)
+            if log_dir is None:
+                print(f"== {step.name}", flush=True)
+            log: Path | None = None
             if step.command is None:
                 passed = _critical_coverage(coverage_json)
             else:
-                passed = run(step.command, ROOT) == 0
+                if log_dir is not None:
+                    log = log_dir / _log_name(step.name)
+                passed = run(step.command, ROOT, log) == 0
                 for part in step.command:
                     if part.startswith("--junitxml="):
                         wanted = first if step.name.startswith("tests (") else None
                         _print_table(Path(part.removeprefix("--junitxml=")), wanted)
                         break
             results[step.name] = "passed" if passed else "FAILED"
+            if not passed and log is not None:
+                _show_tail(log)
             if not passed:
                 failed = step.name
                 break
@@ -252,6 +307,8 @@ def main(argv: list[str] | None = None, run: Callable[[list[str], Path], int] = 
     print("Summary:")
     for step in planned:
         print(f"  {step.name}: {results.get(step.name, 'not run')}")
+    if log_dir is not None:
+        print(f"Logs: {log_dir}")
     print("All checks passed." if failed is None else f"Check failed at: {failed}")
     return 0 if failed is None else 1
 

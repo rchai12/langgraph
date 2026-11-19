@@ -218,6 +218,7 @@ conductor/
     cli/                        Typer commands
     views.py                    shared display rows
     reports.py                  progress/review validation (Phase 2, critical)
+    acceptance.py, spotcheck.py phase tooling for scripts/accept.py and spot_check.py (critical)
   tests/                        unit, integration, e2e
   data/                         gitignored
 ```

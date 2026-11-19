@@ -10,8 +10,8 @@ You are the architect. You do not implement phases. You write the documents two 
 | Actor | Reads | Does |
 |---|---|---|
 | **Architect** (you) | everything | Writes the spec and the verification guide, keeps `docs/roadmap.md` and `docs/architecture.md` current |
-| **Coder** | `AGENTS.md`, `docs/architecture.md`, `docs/testing.md`, `docs/phase-conventions.md`, `docs/progress.md`, one spec | Implements exactly one phase |
-| **Verifier** (second agent) | the spec, its guide, the diff | Checks the implementation and reports a verdict to `docs/reviews/` |
+| **Coder** (`/phase-coder NNx`) | one spec, its given files, `docs/phase-conventions.md` "For the coder", the last progress entry | Implements exactly one phase |
+| **Verifier** (`/phase-verifier NNx`, a second agent) | the spec, its guide, the diff | Checks the implementation and reports a verdict to `docs/reviews/` |
 
 This file is the whole procedure: follow the checklist in order, every phase. `history.md` holds one line per phase (what was built, what went wrong); read it only to size a phase or to find a precedent.
 
@@ -24,13 +24,25 @@ Ask only for decisions the design and existing owner instructions leave open.
 ## Tools (all in this folder; keep them lint-clean, since `ruff` checks `.claude/`)
 
 - `phase_status.py`: the tree's state, last commits, specs without a review, the latest progress entry, the newest review's head, and the public names the last phase added.
-- `gen_spec.py`: builds a spec or guide from a template with `{{file:PATH}}`, `{{raw:PATH}}`, `{{var:NAME}}`, and checks every embedded copy.
+- `phase_tools.py` (its docstring gives each command): `clone ID --scratch DIR` (the `fail<NN>` clone, venv linked and excluded, import provenance checked); `failcheck CLONE TEST...` (failure reasons with counts); `stubcheck CLONE TEST...` (names-only stubs from the tests' imports, per-file function and test counts, tests that pass on the stub); `catalog [NAME...] --modules ...` and `searches SPEC [--cwd DIR] [--plant FILE|auto]` (the standing searches, and each search's match count before and after planting); `lint SPEC GUIDE --clone CLONE` (counts, given files present and protected, the probe, spot-check ids, searches and what `accept.py` extracts, placeholders; must print `Lint OK.`); `promote CLONE FILE... --ignore TEST...` (given files into the repository, compared, then the suite's last line without them).
+- `gen_spec.py`: fills `{{var:NAME}}` in a template (and `{{file:PATH}}` for the embedded specs of Phase 9e and earlier).
 - `code_map.py [conductor.prefix] [--who NAME]`: public signatures, class fields, constants and direct test importers, without importing application code.
 - `spot.py`: one spot-check row against code that exists (a correction or a re-verification): replaces exact text (exactly one match, or it stops), runs one test with `-vv` and no bytecode, prints the failure lines, restores the file, and clears `__pycache__`.
 - `probe_skeleton.py`: the starting point of every probe.
-- `templates/spec.md`, `templates/guide.md`: the starting point of every spec and guide template.
+- `templates/spec.md`, `templates/guide.md`: the starting point of every spec and guide: a Given files table with per-file counts, `Given test count: **K**`, Acceptance and Gates tables `accept.py` runs, and one `Searches` block.
+- `scripts/accept.py`, `scripts/spot_check.py`, `scripts/progress.py`, `scripts/check.py --quiet`: the coder's and verifier's tools. `lint` checks what `accept.py` will extract from the documents; never run acceptance itself in a planning clone. Use `spot_check.py` to confirm a given test catches a mutation in a scratch copy of code that exists.
+- `.claude/hooks/no_reference_build.py`: asks the owner before any write into `src/conductor/` under the scratchpad, except in clones named `fail*` or `spot*`, so the planning clone is always `fail<NN>`.
 
-Scratch work lives in the session scratchpad: given files under `<scratch>/pNN/` at their repository paths, the `fail<NN>` clone, and the templates `spec-NN.md` and `guide-NN.md`.
+A step done by hand in two phases, or one that went wrong by hand, becomes a tool: one job, quiet output, linted. Keep this list to one entry per tool.
+
+Scratch work lives in the session scratchpad: the `fail<NN>` clone (given files at their repository paths inside it) and the filled templates `spec-NN.md` and `guide-NN.md`. **From Phase 9f, given files and the probe are committed with the spec, never embedded**: built in the clone, placed with `promote`, guarded in Acceptance by `git diff HEAD --stat -- <given files>`.
+
+### Keeping a phase cheap
+
+- **Quiet output.** A test run prints counts grouped by reason (`failcheck`) or its last lines, never the full list. Long files are read by range.
+- **Facts before files.** Every spike runs before the first test is written.
+- **Decide once.** Test ids, literal expected values and the final formatting go into a test the first time it is written.
+- **One session per phase.** `phase_status.py`, `history.md` and the docs carry everything across.
 
 ## Checklist
 
@@ -60,11 +72,11 @@ Scratch work lives in the session scratchpad: given files under `<scratch>/pNN/`
 
 ### 4. Given tests, in the `fail<NN>` clone
 
-12. Make the clone first (`git clone -q . <scratch>/fail<NN>`) and work only inside it: `ruff format` and `ruff check` from inside it, every module the phase creates present as an empty stub (or only its given part), and `PYTHONPATH=<clone>/src`, because the venv's conductor is the main repo.
+12. Make the clone first (`phase_tools.py clone NNx --scratch <scratch>`) and work only inside it: `ruff format` and `ruff check` from inside it, every module the phase creates present as an empty stub (or only its given part), and `PYTHONPATH=<clone>/src`, because the venv's conductor is the main repo. The given tests, fakes and probe live at their repository paths in the clone.
 13. **Never build the feature in the clone** (the owner's decision, 2026-11-10). Signs of drift, any one of which means stop: running the whole suite or `scripts/check.py` there, a scratch `src/` diff of more than about 30 lines beyond the given parts, or confirming a spot check or an expected value by running new code.
 14. Write tests in their final formatted shape, and edit them by exact text with an asserted single match, never with `sed` regexes.
 15. Expected values are literal. Ids are read from the output or `--json`, never counter values. A case that varies a base changes one key (`{**base, key: new}`), and each refusal case is read against the base for a second, unintended difference.
-16. Fail check: run only the given tests; each fails for the right reason (the missing behaviour, not a typo). Lines after a test's first failing assertion never run, so check every attribute and method they use against the real class.
+16. Fail check with `phase_tools.py failcheck` and `stubcheck`: run only the given tests; each fails for the right reason (the missing behaviour, not a typo). Copy the per-file counts from `stubcheck` into the Given files table. Lines after a test's first failing assertion never run, so check every attribute and method they use against the real class.
     Count parameter sets with collection, never by hand. With names-only stubs,
     classify each passing test as a guard or weak evidence. Failure injection
     uses a distinct exception class: RuntimeError also catches NotImplementedError.
@@ -72,7 +84,7 @@ Scratch work lives in the session scratchpad: given files under `<scratch>/pNN/`
 
 ### 5. Probe
 
-18. Start from `probe_skeleton.py`. The oracle is built from its own tables only, never from the code under test. It checks itself on known cases (`assert` lines) first. Random inputs are a valid base with at most one change. Each check is wrapped, so an exception prints `FAIL` and the run reaches `FAILURES N`. Import new names inside checks; force important transitions and assert reach counts. Isolate each trial's storage. Header tests send raw requests, not a client that normalises headers.
+18. Write the probe as the given file `docs/verification/probe-NNx.py` in the clone, starting from `probe_skeleton.py`. The oracle is built from its own tables only, never from the code under test. It checks itself on known cases (`assert` lines) first. Random inputs are a valid base with at most one change. Each check is wrapped, so an exception prints `FAIL` and the run reaches `FAILURES N`. Import new names inside checks; force important transitions and assert reach counts. Isolate each trial's storage. Header tests send raw requests, not a client that normalises headers.
 19. Run the oracle part alone, then the probe on today's code: its new checks must print `FAIL`, and nothing may stop. Keep it lean: it checks what the given tests do not reach.
 
 ### 6. Spot checks (on paper)
@@ -83,18 +95,21 @@ Scratch work lives in the session scratchpad: given files under `<scratch>/pNN/`
 
 21. Copy `templates/spec.md` and `templates/guide.md` to the scratchpad and fill them in. The spec fixes every public name and message, separates the owner's decisions from the architect's, names in "Out of scope" what a capable coder would over-deliver, and restates the rules that bite.
 22. Acceptance: at least N + given passed; the given files' exact count; the coverage command; `grep -c "^## Phase NNx: " docs/progress.md` printing `1`, then `check_reports.py --phase NNx`; the searches; the protected diffs.
-23. Searches use `git grep --untracked -n -E`, with **no `\b`** (it silently matches nothing; use `([^a-z_]|$)`). Name the risky call, never a common attribute. Run each one on today's code (silence), and on a planted line (a match).
+23. Searches use `git grep --untracked -n -E`, with **no `\b`** (it silently matches nothing; use `([^a-z_]|$)`). Name the risky call, never a common attribute. Take the standing ones from `phase_tools.py catalog`; write a phase's own search only for a rule the catalog lacks, and add it to `SEARCHES` when a second phase needs it. Run each with `phase_tools.py searches` on the clone (silence), then with `--plant auto` plus a plant file for the phase's own searches (a match each).
 24. The guide first checks that the coder ran, a progress entry exists and executable planning documents match the committed baseline. Mutation checks run only in scratch copies, with their imports and `PYTHONDONTWRITEBYTECODE=1`; confirm the original test passes and the mutation fails for its intended reason. A probe oracle failure is a spec defect. An unexpected mutation failure needs investigation; a surviving mutation can be weak evidence rather than a code defect. List reasonable variations.
-25. Commands use `.venv/bin/python`. Build both documents with `gen_spec.py`, then run `.venv/bin/python -m ruff check .` and `.venv/bin/python -m ruff format --check .`. Reconcile counts, paths, test ids, coverage and searches in both docs; remove draft placeholders before handoff. Do not advertise tasking-only tooling.
+25. Commands use `.venv/bin/python`. Build both documents from the templates with `gen_spec.py`, then run `phase_tools.py lint SPEC GUIDE --clone <fail clone>` until it prints `Lint OK.`, then `.venv/bin/python -m ruff check .` and `.venv/bin/python -m ruff format --check .`. Then `promote` the given files and the probe with `--ignore` on the new given tests, and read its Start line: it must be `N passed`.
 
 ### 8. Hand over
 
 26. Update the roadmap's status line and row, affected design docs and `history.md` ("specified; result pending"). Record owner decisions in project docs; update personal memory only when explicitly asked.
-27. Report: both paths, what was decided on the owner's behalf, the spikes, the coder and verifier prompts, and that the owner commits first, so the coder starts from a clean tree.
+27. Report: both paths and the given files, what was decided on the owner's behalf, the spikes, the coder and verifier prompts, and that the owner commits the spec, guide, given files, probe and doc changes first, so the coder starts from a clean tree.
+28. Look back over the phase's work: a step repeated by hand, or one that went wrong, becomes a tool now, or a note in `history.md` until it happens twice.
 
-> Coder: Read AGENTS.md, docs/architecture.md, docs/testing.md, docs/phase-conventions.md, docs/progress.md, and docs/phases/phase-NNx-<slug>.md. Implement only that phase. Run every command under "Acceptance" before you report, and write the progress entry.
+> Coder: /phase-coder NNx
 
-> Verifier: Read AGENTS.md, docs/phase-conventions.md, docs/phases/phase-NNx-<slug>.md, and docs/verification/phase-NNx-<slug>.md. Follow the verification guide against the current diff. Do not modify files except your report. Report the verdict.
+> Verifier: /phase-verifier NNx
+
+Both run in fresh sessions, one agent each. The `phase-coder` and `phase-verifier` skills hold their standing workflow; a change to how either works goes there or into `docs/phase-conventions.md`, never into each spec.
 
 ## Project rules (every spec)
 

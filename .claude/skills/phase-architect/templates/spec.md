@@ -12,8 +12,9 @@ Decided by the architect, within those answers:
 
 ## Read first
 
-- `docs/phase-conventions.md`, `AGENTS.md` (<rules that bite>), `docs/architecture.md` ("<sections>")
+- The given files below, in full: they are the contract.
 - <real modules and tests the phase builds on, with the names to look at>
+- `docs/architecture.md` ("<section>") only where this phase changes it.
 
 ## Starting state
 
@@ -23,15 +24,16 @@ Phase <NN-1> is built and verified, and everything is committed: N is `{{var:N}}
 
 | Path | What |
 |---|---|
-| `<path>` | <given / new / one change> (Part n) |
-| `<test paths>` | given |
+| `<path>` | <new / one change> (Part n) |
 | `<coder test paths>` | new: the coder's tests |
 | `docs/progress.md` | one new entry |
+
+The given files are already committed; they are not in the Scope and never change.
 
 ## Out of scope
 
 - <what a capable coder would over-deliver: extra options, refactors, later phases>
-- Any change to <protected modules>.
+- Any change to a given file, `AGENTS.md` or the design docs.
 
 ## Dependencies
 
@@ -41,7 +43,7 @@ None new.
 
 ### Part 1: <area>
 
-<Exact names, signatures, messages, and behaviour. Given code as {{file:...}} blocks.>
+<Exact names, signatures, messages, and behaviour.>
 
 ## Facts
 
@@ -55,16 +57,19 @@ Checked on YYYY-MM-DD. <Facts from installed library source or small offline syn
 
 ### Part n: the rules
 
-- **Rn.** Only the Scope's paths change. No earlier test changes <except the given edits>.
+- **Rn.** Only the Scope's paths change; given files stay byte-identical.
 - **Rn.** <the coverage requirement>
 
-## Given tests
+## Given files
 
-{{var:GIVEN}} new tests in <k> files (counting each parameter set). Do not change them; if one fails, the code is wrong. Before your change, <which fail, and why>.
+Committed with this spec. Do not change them; if a given test fails, the code is wrong. Before your change, <which fail, and why>.
 
-`<path>` (<count> tests)
+| File | What it is |
+|---|---|
+| `<tests/unit/test_x.py>` | <what it pins> ({{var:K1}} tests from <f> functions) |
+| `docs/verification/probe-NNx.py` | the probe, run by its path in Acceptance |
 
-{{file:<path>}}
+Given test count: **{{var:GIVEN}}**.
 
 ## Tests to write
 
@@ -80,16 +85,27 @@ Each with its deciding input:
 
 ## Acceptance
 
-The standard table of `docs/phase-conventions.md`, with:
+`.venv/bin/python scripts/accept.py --phase NNx` runs every row and search below in order and prints one line each; compare each with "Must show".
 
-- the check: `.venv/bin/python scripts/check.py --first <sections>`; at least N + {{var:GIVEN}} = {{var:MIN}} passed;
-- the given files: `.venv/bin/python -m pytest <given paths> --no-cov`, exactly `{{var:GIVEN_RUN}} passed`;
-- the coverage command: `.venv/bin/python -m coverage report --include="<modules>" --fail-under=100`;
-- `grep -c "^## Phase NNx: " docs/progress.md` prints `1`, and then `.venv/bin/python scripts/check_reports.py --phase NNx` prints `Reports OK.`;
-- the searches, each with no output:
-  - `git grep --untracked -n -E "<pattern, no \b>" -- <paths>`
-- `git diff --stat HEAD -- <protected paths>` prints nothing.
+| Command | Must show |
+|---|---|
+| `.venv/bin/python scripts/check.py --quiet --first <sections>` | last line `All checks passed.`; at least {{var:MIN}} passed, 0 failed, 0 skipped, 0 xfailed; every `Sections:` row 0 failed |
+| `.venv/bin/python -m coverage report --include='<modules>' --fail-under=100` (right after the check) | exit 0, `TOTAL` at `100%` |
+| `.venv/bin/python -m pytest <given test paths> --no-cov -q` | `{{var:GIVEN}} passed` |
+| `.venv/bin/python docs/verification/probe-NNx.py` | last line `FAILURES 0` |
+| `git diff HEAD --stat -- <given files> docs/verification/probe-NNx.py <protected paths>` | no output |
+| `git status --short --untracked-files=all` | only the Scope paths |
+| `grep -c '^## Phase NNx: ' docs/progress.md` | `1` |
+| `.venv/bin/python scripts/check_reports.py --phase NNx` (after writing progress) | `Reports OK.` |
+
+### Searches
+
+Each prints nothing (git grep exit 1 is no match).
+
+```sh
+git grep --untracked -n -E '<pattern, no \b>' -- <paths>
+```
 
 ## Report
 
-As in `docs/phase-conventions.md`, headed `## Phase NNx: <name> (YYYY-MM-DD)`, with `Tests: {{var:N}} -> <passed> (given {{var:GIVEN}})`.
+Write the entry with `scripts/progress.py` as `docs/phase-conventions.md` gives, titled `<name>`, with `--tests-before {{var:N}} --given {{var:GIVEN}}`.
