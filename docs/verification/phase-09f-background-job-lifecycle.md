@@ -8,9 +8,12 @@ Spec: `docs/phases/phase-09f-background-job-lifecycle.md`. Follow `docs/phase-co
 - An entry whose first Follow-ups item starts `Stopped:`: write the FAIL review the conventions describe, run the given tests once for `Passed`, and stop.
 - `git ls-files --error-unmatch docs/phases/phase-09f-background-job-lifecycle.md docs/verification/phase-09f-background-job-lifecycle.md tests/unit/test_web_jobs_lifecycle.py tests/e2e/test_cli_web_shutdown.py docs/verification/probe-09f.py` must succeed: the gates judge against a committed baseline.
 
+Correction 1 (2026-11-18): `tests/unit/test_resumer.py` is in the Scope for two lines only. `git diff HEAD -- tests/unit/test_resumer.py` must show exactly the rename to `test_a_second_start_waits_and_the_thread_is_a_daemon` and `assert calls == [(RUN, True)]`, and no other change. Any other change to that file is a finding against R11. The stopped entry from the first attempt is replaced by the rerun's; judge only the rerun's entry.
+
 The coder:
 - changed `src/conductor/web/jobs.py`: four constants, daemon workers, failure-only retention capped at 100, `retained()`, `close(timeout)`;
 - changed `web()` in `src/conductor/cli/main.py` to own, pass and close one `Resumer` and name unfinished runs on stderr;
+- edited two lines of `tests/unit/test_resumer.py` (correction 1);
 - added `tests/unit/test_web_jobs_lifecycle_more.py` and one progress entry.
 
 ## 1. Gates
@@ -33,7 +36,7 @@ N is `1163`. Given count: 18. `.venv/bin/python scripts/accept.py --phase 9f --g
 | Id | How | Pass when |
 |---|---|---|
 | R1 | `test_the_limits_and_messages` | passes |
-| R2 | `test_a_worker_is_a_daemon_thread`; read `start` | passes; the thread is made with `daemon=True` |
+| R2 | `test_a_worker_is_a_daemon_thread`, `tests/unit/test_resumer.py::test_a_second_start_waits_and_the_thread_is_a_daemon`; read `start` | pass; the thread is made with `daemon=True` |
 | R3 | `test_finished_resumes_are_forgotten`; probe check 1 | pass; `ok` |
 | R4 | `test_a_failure_is_kept` (both cases); the coder's `ToolCheckFailed` test | pass; `_run` keeps no text of an unexpected exception |
 | R5 | `test_failures_are_capped_oldest_first`, `test_a_repeated_failure_is_the_newest`; probe checks 1 and 5 | pass; `ok` |
@@ -110,7 +113,7 @@ Each must be absent:
 - cancelling or signalling a running resume;
 - a FastAPI lifespan, or any change to `web/app.py`, its templates or `create_app`'s signature;
 - releasing a lease on shutdown, or any change to `runtime.py` or `store.py`;
-- any change to a given file, an existing test, `AGENTS.md` or the design docs.
+- any change to a given file, `AGENTS.md` or the design docs, or to an existing test beyond correction 1.
 
 ## 8. Verdict
 

@@ -447,7 +447,7 @@ def lint(spec_path: Path, guide_path: Path, clone: Path) -> int:
         if not any(f".venv/bin/python {probe}" in row[0] for row in accept_rows):
             problems.append(f"spec: acceptance does not run {probe}")
     tests = [path for path in given if Path(path).name.startswith("test_")]
-    new_tests = [path for path in tests if path not in tracked(clone, tests)]
+    new_tests = tests  # given files are tracked once the spec is committed; count them all
     spot_ids = re.findall(r"`(tests/[^`:]+\.py::[^`]+)`", guide)
     spot_files = sorted({test_id.partition("::")[0] for test_id in spot_ids} - set(new_tests))
     ids = collected_ids(clone, new_tests + [path for path in spot_files if (clone / path).exists()])

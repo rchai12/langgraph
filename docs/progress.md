@@ -244,3 +244,12 @@ The coding agent appends one entry per phase, in the form `docs/phase-convention
   - None
 - Follow-ups:
   - None
+
+## Phase 9f: Background job lifecycle (2026-11-18)
+- Tests: 1163 -> 1163 (given 18)
+- New public names: None
+- Changed files: 1
+- Deviations:
+  - None
+- Follow-ups:
+  - Stopped: R2 | tests/unit/test_resumer.py::test_a_second_start_waits_and_the_thread_is_not_a_daemon requires daemon False, and that file is outside Scope | allow that test to expect a daemon thread, or add it to Scope

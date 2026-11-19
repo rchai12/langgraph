@@ -1,5 +1,16 @@
 # Phase 9f: Background job lifecycle
 
+## Corrections
+
+**2026-11-18, correction 1 (a spec error, not the coder's).** R2 makes workers daemon threads, but the existing test `tests/unit/test_resumer.py::test_a_second_start_waits_and_the_thread_is_not_a_daemon` asserts that they are not. The spec missed it, so the phase could not pass. That file is now in the Scope, for exactly these two one-line edits and nothing else:
+
+| Old line | New line |
+|---|---|
+| `def test_a_second_start_waits_and_the_thread_is_not_a_daemon(monkeypatch) -> None:` | `def test_a_second_start_waits_and_the_thread_is_a_daemon(monkeypatch) -> None:` |
+| `        assert calls == [(RUN, False)]` | `        assert calls == [(RUN, True)]` |
+
+The file's other three tests stay as they are. They already hold under this design: a kept failure, the fixed text, `the tool check failed`, and a restart that clears the failure. N stays `1163` and the given count stays 18. Nothing was built before the stop, so every Acceptance row and search is live again. Run `scripts/accept.py --phase 9f` again; `progress.py` replaces the stopped entry.
+
 ## Goal
 
 The approvals page's background resumer (`conductor.web.jobs.Resumer`) stops growing with every resume, and stopping `conductor web` no longer waits for a model call to time out. After this phase a finished resume that succeeded leaves nothing behind. A failed one leaves its message, and at most the newest 100 messages are kept. A running resume is never dropped. On shutdown the server waits at most 10 seconds for running resumes, then exits and names the runs that were still running. This implements audit finding 1's resumer part; 9e removed its graph-services part.
@@ -31,6 +42,7 @@ Phase 9e is built and verified, and the workflow port is committed: N is `1163`.
 |---|---|
 | `src/conductor/web/jobs.py` | the four constants, `retained`, `close`, daemon workers, retention (Part 1) |
 | `src/conductor/cli/main.py` | `web()` owns, passes and closes one `Resumer` (Part 2) |
+| `tests/unit/test_resumer.py` | only the two edits in Corrections, correction 1 |
 | `tests/unit/test_web_jobs_lifecycle_more.py` | new: the coder's tests |
 | `docs/progress.md` | one new entry |
 
@@ -43,7 +55,7 @@ The given files are already committed; they are not in the Scope and never chang
 - Cancelling, interrupting or signalling a running resume, and making an interrupted step idempotent.
 - A FastAPI lifespan, or any change to `web/app.py`, its templates or `create_app`'s signature.
 - Releasing a lease on shutdown, or any change to `runtime.py` or `store.py`.
-- Any change to a given file, an existing test, `AGENTS.md` or the design docs.
+- Any change to a given file, `AGENTS.md` or the design docs, or to an existing test beyond Corrections, correction 1.
 
 ## Dependencies
 
@@ -142,7 +154,7 @@ In `tests/unit/test_web_jobs_lifecycle_more.py` (section `core`), with the given
 - Error messages are constant text plus ids. Never keep or print an unexpected exception's text.
 - Tests touch no network and no real model; they replace `runtime.open_runtime` and `runtime.resume`. Each test releases every thread it holds.
 - Commands start with `.venv/bin/python`. Do not commit.
-- Earlier tests stay unchanged.
+- Earlier tests stay unchanged, except the two lines in Corrections, correction 1.
 
 ## Acceptance
 
