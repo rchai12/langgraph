@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
-from conductor import domains
+from conductor import domains, private
 from conductor.config import Settings
 from conductor.llm import tags
 from conductor.mcp_client.check import ServerCheck, check_servers
@@ -43,11 +43,13 @@ def check_data_folder(folder: Path) -> Check:
     name = f"data folder {folder}"
     probe = folder / ".doctor-write-test"
     try:
-        folder.mkdir(parents=True, mode=0o700, exist_ok=True)
+        private.ensure_dir(folder)
         probe.write_bytes(b"")
         probe.unlink()
     except OSError:
         return Check("FAIL", name, "not writable")
+    if private.open_to_others(folder):
+        return Check("FAIL", name, f"open to other users (run: chmod 700 {folder})")
     return Check("ok", name)
 
 

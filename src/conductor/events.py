@@ -9,7 +9,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
-from conductor import clock
+from conductor import clock, private
 
 RUN_ID_MESSAGE = "run id must be 32 lowercase hexadecimal characters"
 _RUN_ID = re.compile(r"[0-9a-f]{32}")
@@ -163,11 +163,8 @@ class EventLog:
         return len(self.read(run_id))
 
     def _write_line(self, run_id: str, line: str) -> None:
-        if not self._folder.exists():
-            self._folder.mkdir(parents=True, mode=0o700)
-            self._folder.chmod(0o700)
         path = self._folder / f"{run_id}.jsonl"
-        descriptor = os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o600)
+        descriptor = private.open_file(path, os.O_WRONLY | os.O_APPEND)
         try:
             os.write(descriptor, line.encode("utf-8"))
             os.fsync(descriptor)

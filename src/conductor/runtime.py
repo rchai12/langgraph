@@ -1,5 +1,4 @@
 import json
-import os
 import sqlite3
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
@@ -8,7 +7,7 @@ from dataclasses import dataclass
 from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph.state import CompiledStateGraph
 
-from conductor import domains, ids
+from conductor import domains, ids, private
 from conductor.config import Settings
 from conductor.contracts import Contract
 from conductor.domains import demo
@@ -159,15 +158,8 @@ class _LeasedRunner:
 
 @contextmanager
 def open_runtime(settings: Settings, *, model: Model | None = None) -> Iterator[Runtime]:
-    folder = settings.data_dir
-    if not folder.exists():
-        folder.mkdir(parents=True, mode=0o700)
-        folder.chmod(0o700)
-    path = settings.checkpoints_path
-    if not path.exists():
-        descriptor = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
-        os.close(descriptor)
-    connection = sqlite3.connect(path, check_same_thread=False)
+    private.ensure_file(settings.checkpoints_path)
+    connection = sqlite3.connect(settings.checkpoints_path, check_same_thread=False)
     try:
         saver = SqliteSaver(connection)
         store = Store(settings.db_path)

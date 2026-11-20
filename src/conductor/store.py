@@ -1,4 +1,3 @@
-import os
 import re
 import sqlite3
 from collections.abc import Callable
@@ -9,7 +8,7 @@ from typing import TypeVar
 
 from pydantic import ValidationError
 
-from conductor import clock, ids
+from conductor import clock, ids, private
 from conductor.contracts import Contract, Escalation
 from conductor.contracts.approvals import ApprovalDecision, ApprovalRequest, EscalationAnswer
 
@@ -327,13 +326,7 @@ class Store:
 
 
 def _prepare(path: Path) -> None:
-    folder = path.parent
-    if not folder.exists():
-        folder.mkdir(parents=True, mode=0o700)
-        folder.chmod(0o700)
-    if not path.exists():
-        descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-        os.close(descriptor)
+    private.ensure_file(path)
 
 
 def _require_ids(thread_id: str, holder: str) -> None:

@@ -10,6 +10,7 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import get_default_environment, stdio_client
 from mcp.shared.exceptions import MCPError
 
+from conductor import private
 from conductor.config import Settings
 from conductor.registry import McpServer
 
@@ -101,14 +102,8 @@ def _environment(server: McpServer) -> dict[str, str]:
 
 
 def _log_path(data_dir: Path, name: str) -> Path:
-    folder = data_dir / "mcp"
-    path = folder / f"{name}.log"
-    if not folder.exists():
-        folder.mkdir(parents=True, mode=0o700)
-        folder.chmod(0o700)
-    if not path.exists():
-        descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-        os.close(descriptor)
+    path = data_dir / "mcp" / f"{name}.log"
+    private.ensure_file(path)
     return path
 
 

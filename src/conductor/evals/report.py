@@ -8,7 +8,7 @@ from typing import Literal
 
 from pydantic import AwareDatetime, ValidationError
 
-from conductor import clock
+from conductor import clock, private
 from conductor.contracts import Contract
 from conductor.events import EventKind, EventLog, RunNotFound
 
@@ -90,12 +90,9 @@ def build_report(
 
 
 def save_report(report: Report, folder: Path) -> Path:
-    if not folder.exists():
-        folder.mkdir(parents=True, mode=0o700)
-        folder.chmod(0o700)
     name = report.created.astimezone(UTC).strftime("%Y%m%dT%H%M%S%fZ") + ".json"
     path = folder / name
-    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    descriptor = private.open_file(path, os.O_WRONLY | os.O_EXCL)
     try:
         os.write(descriptor, (report.model_dump_json(indent=2) + "\n").encode())
         os.fsync(descriptor)

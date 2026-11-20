@@ -271,3 +271,12 @@ The coding agent appends one entry per phase, in the form `docs/phase-convention
   - None
 - Follow-ups:
   - None
+
+## Phase 9i: Private storage primitives (2026-11-20)
+- Tests: 1271 -> 1309 (given 30)
+- New public names: private: DIR_MODE, FILE_MODE, ensure_dir, open_file, ensure_file, open_to_others
+- Changed files: 11
+- Deviations:
+  - _prepare stays a one-line call to private.ensure_file.
+- Follow-ups:
+  - None

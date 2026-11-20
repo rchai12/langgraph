@@ -21,3 +21,4 @@ web/app.py
 web/jobs.py
 acceptance.py
 spotcheck.py
+private.py
