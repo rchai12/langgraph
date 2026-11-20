@@ -28,6 +28,7 @@ Applies to every phase. Phase specs list the specific tests; this file sets the 
 A bug here lets the agent act without approval, lose its record, or accept output it should refuse, so every line and branch must be covered. The list lives in `scripts/critical_modules.txt` (paths relative to `src/conductor/`), which `scripts/check.py` reads; a phase that adds a critical module adds it there and here.
 
 - `events.py` (the event log; Phase 1)
+- `private.py` (owner-only folders and files under the data folder; Phase 9i, listed in `critical_modules.txt` by its coder)
 - `reports.py` (progress entries and reviews; Phase 2b)
 - `plancheck.py` (plans checked against the registry; Phase 2c)
 - `llm/decide.py` (every model call: validation and its record; Phase 3c)

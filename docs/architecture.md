@@ -131,7 +131,7 @@ The answer point's message (the request and every step result as JSON) is bounde
 
 ## State, threads, and storage
 
-Everything lives under the data folder (`CONDUCTOR_DATA_DIR`, default `./data`, gitignored, created `0700`):
+Everything lives under the data folder (`CONDUCTOR_DATA_DIR`, default `./data`, gitignored, created `0700`). From Phase 9i, `conductor/private.py` (critical, standard library only) creates every folder and file in it: each folder the code creates `0700`, parents included, and each file `0600`, whatever the umask; a path that already exists, or that another process creates first, keeps its mode. `conductor doctor` fails, without changing anything, when the data folder is open to group or others (decided 2026-11-20):
 
 | Path | What |
 |---|---|
@@ -199,6 +199,7 @@ conductor/
     config.py                   Settings, get_settings() (Phase 1)
     clock.py, ids.py            now() in UTC and new ids, read through one function each (Phase 1)
     events.py                   the event log (Phase 1, critical)
+    private.py                  owner-only folders and files under the data folder (Phase 9i, critical)
     diagnostics.py              conductor doctor's checks (Phase 1)
     contracts/                  pure typed contracts (Phase 2)
     registry.py                 domains and actions (Phase 2)

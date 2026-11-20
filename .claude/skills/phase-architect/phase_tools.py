@@ -202,7 +202,10 @@ def missing_imports(root: Path, tests: list[str]) -> dict[str, list[str]]:
                 continue
             source = module_file(root, node.module)
             have = defined_names(root / source)
+            package = root / "src" / node.module.replace(".", "/")
             for alias in node.names:
+                if (package / f"{alias.name}.py").is_file() or (package / alias.name).is_dir():
+                    continue  # a submodule (`from conductor.domains import demo`), not a name
                 if alias.name not in have and alias.name not in missing.get(source, []):
                     missing.setdefault(source, []).append(alias.name)
     return missing
