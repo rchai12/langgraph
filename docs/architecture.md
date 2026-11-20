@@ -91,6 +91,8 @@ A decision point (`answer`, `planning/answer.py`, critical; Phase 5b) that turns
 
 ## Contracts (`conductor/contracts/`, pure Pydantic, no project imports)
 
+From Phase 9j, `contracts/base.py` also holds the rules several layers share, each written once: the 32-hex id (`ID_PATTERN`, `is_id`), the request bounds (`MAX_REQUEST`, `REQUEST_MESSAGE`, `RequestText`, `is_request`: 1 to 2000 characters, not blank), the Contract-type check (`is_contract_type`) and the UTC check (`UTC_MESSAGE`, `is_utc`). `conductor/times.py` (critical) holds the display format `%Y-%m-%dT%H:%M:%SZ` and the stored format `%Y-%m-%dT%H:%M:%S.%fZ`, and refuses a time that is not UTC (decided 2026-11-20).
+
 - `Route`: `domain`, `decided_by` (`rule` or `model`), `rule_id` or `decision_id`.
 - `Step`: `id` (`s1`, `s2`, ...), `action` (`<domain>.<name>`), `args`.
 - `Plan`: `steps` (1 to 8).
@@ -198,6 +200,7 @@ conductor/
   src/conductor/
     config.py                   Settings, get_settings() (Phase 1)
     clock.py, ids.py            now() in UTC and new ids, read through one function each (Phase 1)
+    times.py                    the display and stored time formats, UTC only (Phase 9j, critical)
     events.py                   the event log (Phase 1, critical)
     private.py                  owner-only folders and files under the data folder (Phase 9i, critical)
     diagnostics.py              conductor doctor's checks (Phase 1)
