@@ -133,6 +133,23 @@ def test_a_broken_log_and_a_non_text_type_show_no_failure() -> None:
     assert (numbered_page.status_code, FAILURE in numbered_page.text) == (200, False)
 
 
+def test_an_empty_log_and_a_different_error_show_no_failure() -> None:
+    empty = failed_once()
+    other = failed_once()
+    path = get_settings().runs_dir / f"{empty}.jsonl"
+    path.write_text("", encoding="utf-8")
+    empty_page = client(Still()).get(f"/runs/{empty}")
+    assert (empty_page.status_code, FAILURE in empty_page.text) == (200, False)
+
+    EventLog(get_settings().runs_dir).append(
+        other,
+        EventKind.ERROR,
+        payload={"error": "other", "type": "ValueError"},
+    )
+    other_page = client(Still()).get(f"/runs/{other}")
+    assert (other_page.status_code, FAILURE in other_page.text) == (200, False)
+
+
 def test_a_busy_run_keeps_the_record_off_the_page() -> None:
     run_id = failed_once()
     text = client(Still(busy=True)).get(f"/runs/{run_id}").text
