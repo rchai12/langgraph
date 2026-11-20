@@ -1,9 +1,10 @@
 from dataclasses import dataclass
 from typing import Literal
 
-from pydantic import Field, create_model
+from pydantic import create_model
 
 from conductor.contracts import MAX_PROBLEMS, Contract, Escalation, FieldProblem, Route
+from conductor.contracts.base import REQUEST_MESSAGE, RequestText, is_request
 from conductor.events import EventLog
 from conductor.llm.decide import InvalidModelOutput, decide, escalation_for
 from conductor.llm.model import Model, ModelUnavailable
@@ -11,7 +12,6 @@ from conductor.llm.points import DecisionPoint
 from conductor.registry import Registry
 from conductor.routing.rules import RuleConflict, RuleRoute, match_rules
 
-REQUEST_MESSAGE = "a request must have 1 to 2000 characters"
 NO_DOMAINS_MESSAGE = "no domains are registered"
 CONFLICT_MESSAGE = "rules of more than one domain match the request"
 EMPTY_MESSAGE = "nothing follows the prefix"
@@ -20,7 +20,7 @@ ROUTE_REPLY_TOKENS = 2048
 
 
 class RouteInputs(Contract):
-    request: str = Field(min_length=1, max_length=2000)
+    request: RequestText
 
 
 @dataclass(frozen=True)
@@ -63,7 +63,7 @@ def route_request(
     log: EventLog,
     run_id: str,
 ) -> Routed | Escalation:
-    if not request.strip() or len(request) > 2000:
+    if not is_request(request):
         raise ValueError(REQUEST_MESSAGE)
     found = match_rules(request, registry)
     if isinstance(found, RuleRoute):

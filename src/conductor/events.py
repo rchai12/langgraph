@@ -1,19 +1,17 @@
 import json
 import os
-import re
 from collections.abc import Mapping
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
-from conductor import clock, private
+from conductor import clock, private, times
+from conductor.contracts.base import UTC_MESSAGE, is_id, is_utc
 
 RUN_ID_MESSAGE = "run id must be 32 lowercase hexadecimal characters"
-_RUN_ID = re.compile(r"[0-9a-f]{32}")
-_RUN_FILE = re.compile(r"[0-9a-f]{32}\.jsonl")
 
 type JsonValue = str | int | float | bool | None | list[JsonValue] | dict[str, JsonValue]
 
@@ -46,8 +44,8 @@ class Event(BaseModel):
     @field_validator("at")
     @classmethod
     def _at_is_utc(cls, value: datetime) -> datetime:
-        if value.utcoffset() != timedelta(0):
-            raise ValueError("time must be UTC")
+        if not is_utc(value):
+            raise ValueError(UTC_MESSAGE)
         return value
 
 
@@ -67,7 +65,7 @@ class RunSummary:
 
 
 def check_run_id(run_id: str) -> str:
-    if _RUN_ID.fullmatch(run_id) is None:
+    if not is_id(run_id):
         raise ValueError(RUN_ID_MESSAGE)
     return run_id
 
@@ -89,7 +87,7 @@ def _json_shape(value: object) -> None:
 
 def _event_line(event: Event) -> str:
     data = {
-        "at": event.at.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+        "at": times.stored(event.at),
         "kind": event.kind.value,
         "node": event.node,
         "payload": event.payload,
@@ -147,7 +145,7 @@ class EventLog:
             return []
         found: list[RunSummary] = []
         for path in self._folder.iterdir():
-            if _RUN_FILE.fullmatch(path.name) is None:
+            if not (path.name.endswith(".jsonl") and is_id(path.name.removesuffix(".jsonl"))):
                 continue
             run_id = path.name.removesuffix(".jsonl")
             events = self.read(run_id)

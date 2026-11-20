@@ -2,7 +2,7 @@ from typing import Literal
 
 from pydantic import Field
 
-from conductor.contracts.base import Contract, Id, Name
+from conductor.contracts.base import Contract, Id, Name, RequestText
 from conductor.llm.points import DecisionPoint
 from conductor.registry import Action, Domain, Rule
 
@@ -74,7 +74,7 @@ DOMAIN = Domain(
 
 
 class PickInputs(Contract):
-    request: str = Field(min_length=1, max_length=2000)
+    request: RequestText
 
 
 class PickOutput(Contract):

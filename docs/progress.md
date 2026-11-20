@@ -280,3 +280,13 @@ The coding agent appends one entry per phase, in the form `docs/phase-convention
   - _prepare stays a one-line call to private.ensure_file.
 - Follow-ups:
   - None
+
+## Phase 9j: Shared validation and presentation contracts (2026-11-20)
+- Tests: 1309 -> 1346 (given 33)
+- New public names: contracts.base: ID_PATTERN, MAX_REQUEST, REQUEST_MESSAGE, RequestText, UTC_MESSAGE, is_id, is_request, is_contract_type, is_utc; times: DISPLAY_FORMAT, STORED_FORMAT, display, stored
+- Changed files: 20
+- Deviations:
+  - _stamp, views._when, cli._when, and both _is_contract helpers stay one-line wrappers; the supervisor and the answer step still import REQUEST_MESSAGE from routing.route.
+  - A .JSONL name cannot sit beside the same .jsonl name on this case-insensitive volume, so that suffix is checked in its own folder.
+- Follow-ups:
+  - None

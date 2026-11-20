@@ -1,13 +1,12 @@
 import json
 from datetime import datetime
 
+from conductor import times
 from conductor.store import StoredApproval, StoredEscalation
-
-_WHEN = "%Y-%m-%dT%H:%M:%SZ"
 
 
 def _when(moment: datetime) -> str:
-    return moment.strftime(_WHEN)
+    return times.display(moment)
 
 
 def _args(value: object) -> str:

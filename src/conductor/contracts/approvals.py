@@ -1,20 +1,26 @@
 import hashlib
 import json
 from collections.abc import Sequence
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Annotated, Literal, Self
 
 from pydantic import AfterValidator, AwareDatetime, Field, model_validator
 
-from conductor.contracts.base import ActionName, Contract, Id, JsonObject, Name
+from conductor.contracts.base import (
+    UTC_MESSAGE,
+    ActionName,
+    Contract,
+    Id,
+    JsonObject,
+    Name,
+    is_utc,
+)
 from conductor.contracts.plans import MAX_STEPS
 
 STEP_COUNT_MESSAGE = "a step approval holds exactly one step"
 NUMBERS_MESSAGE = "plan steps are numbered from 1 in order"
 DIGEST_MESSAGE = "args_sha256 does not match the steps"
 EDIT_MESSAGE = "edited_args go with an edit, and only with an edit"
-UTC_MESSAGE = "time must be UTC"
-
 ApprovalStage = Literal["plan", "step"]
 Verdict = Literal["approve", "reject", "edit"]
 Channel = Literal["terminal", "web"]
@@ -23,7 +29,7 @@ Sha256 = Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
 
 
 def _utc(value: datetime) -> datetime:
-    if value.utcoffset() != timedelta(0):
+    if not is_utc(value):
         raise ValueError(UTC_MESSAGE)
     return value
 

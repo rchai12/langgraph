@@ -12,8 +12,9 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from starlette.responses import Response
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-from conductor import domains, runtime
+from conductor import domains, runtime, times
 from conductor.config import Settings
+from conductor.contracts.base import is_id
 from conductor.decisions import answer_escalation, decide_approval, parse_json_object
 from conductor.events import EventKind, EventLog, EventLogCorrupt, RunNotFound
 from conductor.graph.status import RunState, RunStateUnavailable
@@ -39,12 +40,10 @@ FORM_COOKIE = "conductor_form"
 
 _TEMPLATES = Path(__file__).parent / "templates"
 _HEADER_BYTES = [(name.encode(), value.encode()) for name, value in SECURITY_HEADERS.items()]
-_ID = re.compile(r"^[0-9a-f]{32}$")
 _TOKEN = re.compile(r"^[0-9a-f]{64}$")
 _NOT_FOUND = "Not found"
 _STORE = "The store is not available"
 _ARGUMENTS = "The arguments must be a JSON object."
-_WHEN = "%Y-%m-%dT%H:%M:%SZ"
 
 
 class _HostGuard:
@@ -116,7 +115,7 @@ def _home(store: Store, request: Request, templates: Jinja2Templates) -> Respons
     approvals = [
         {
             "approval_id": item.approval_id,
-            "when": item.requested_at.strftime(_WHEN),
+            "when": times.display(item.requested_at),
             "stage": item.stage,
             "actions": ", ".join(step.action for step in item.steps),
         }
@@ -125,7 +124,7 @@ def _home(store: Store, request: Request, templates: Jinja2Templates) -> Respons
     escalations = [
         {
             "escalation_id": item.escalation_id,
-            "when": item.raised_at.strftime(_WHEN),
+            "when": times.display(item.raised_at),
             "kind": item.escalation.kind,
             "run_id": item.escalation.run_id,
         }
@@ -185,7 +184,7 @@ def _origins(settings: Settings) -> set[str]:
 
 
 def _refused(request: Request, item_id: str, sent: str, settings: Settings) -> Response | None:
-    if _ID.fullmatch(item_id) is None:
+    if not is_id(item_id):
         return PlainTextResponse(_NOT_FOUND, status_code=404)
     origin = request.headers.get("origin")
     if origin is not None and origin not in _origins(settings):
@@ -327,7 +326,7 @@ def create_app(settings: Settings, *, resumer: Resumer | None = None) -> ASGIApp
 
     @api.get("/approvals/{approval_id}")
     def approval(approval_id: str, request: Request) -> Response:
-        if _ID.fullmatch(approval_id) is None:
+        if not is_id(approval_id):
             return PlainTextResponse(_NOT_FOUND, status_code=404)
 
         def read(store: Store) -> Response:
@@ -348,7 +347,7 @@ def create_app(settings: Settings, *, resumer: Resumer | None = None) -> ASGIApp
 
     @api.get("/escalations/{escalation_id}")
     def escalation(escalation_id: str, request: Request) -> Response:
-        if _ID.fullmatch(escalation_id) is None:
+        if not is_id(escalation_id):
             return PlainTextResponse(_NOT_FOUND, status_code=404)
 
         def read(store: Store) -> Response:
@@ -364,7 +363,7 @@ def create_app(settings: Settings, *, resumer: Resumer | None = None) -> ASGIApp
 
     @api.get("/runs/{run_id}")
     def run(run_id: str, request: Request) -> Response:
-        if _ID.fullmatch(run_id) is None:
+        if not is_id(run_id):
             return PlainTextResponse(_NOT_FOUND, status_code=404)
         try:
             found = runtime.read_state(settings, run_id)

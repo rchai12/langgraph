@@ -1,10 +1,10 @@
-import re
 from dataclasses import dataclass
 from typing import Literal, cast
 
 from langgraph.checkpoint.base import CheckpointTuple
 from langgraph.types import Interrupt
 
+from conductor.contracts.base import is_id
 from conductor.events import check_run_id
 
 NODES = (
@@ -43,7 +43,6 @@ _FIELDS = frozenset(
 )
 _NODES = frozenset((*NODES, "__start__"))
 _TERMINAL = frozenset({"done", "rejected", "cancelled"})
-_HEX = re.compile(r"^[0-9a-f]{32}$")
 _MISSING = object()
 
 
@@ -196,7 +195,7 @@ def _waiting(interrupts: list[object], live: str | None, run_id: str) -> RunStat
     if not isinstance(item, Interrupt) or type(item.value) is not dict or len(item.value) != 1:
         raise _unavailable(run_id)
     key, value = next(iter(item.value.items()))
-    if type(value) is not str or _HEX.fullmatch(value) is None:
+    if type(value) is not str or not is_id(value):
         raise _unavailable(run_id)
     if key == "approval_id" and live == "wait_approval":
         return RunState(run_id, "waiting", approval_id=value)

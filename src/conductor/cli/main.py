@@ -9,7 +9,7 @@ from typing import Annotated, Any, NoReturn
 import typer
 import uvicorn
 
-from conductor import domains, runtime
+from conductor import domains, runtime, times
 from conductor.config import Settings, SettingsError, get_settings
 from conductor.decisions import answer_escalation, decide_approval, parse_json_object
 from conductor.diagnostics import run_checks, summary_line
@@ -44,8 +44,6 @@ runs_app = typer.Typer(no_args_is_help=True, add_completion=False)
 eval_app = typer.Typer(no_args_is_help=True, add_completion=False)
 app.add_typer(runs_app, name="runs")
 app.add_typer(eval_app, name="eval")
-
-_STORED_AT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
 
 def _bail(message: str) -> NoReturn:
@@ -82,7 +80,7 @@ def list_runs() -> None:
         typer.echo("No runs yet.")
         return
     for summary in found:
-        when = summary.started_at.strftime("%Y-%m-%dT%H:%M:%SZ")
+        when = times.display(summary.started_at)
         word = "event" if summary.events == 1 else "events"
         typer.echo(f"{summary.run_id}  {when}  {summary.events} {word}")
 
@@ -95,7 +93,7 @@ def show(run_id: str, payload: Annotated[bool, typer.Option("--payload")] = Fals
     except (ValueError, RunNotFound, EventLogCorrupt) as error:
         _bail(str(error))
     for event in events:
-        line = f"{event.seq:4d}  {event.at.strftime(_STORED_AT)}  {event.kind.value}"
+        line = f"{event.seq:4d}  {times.stored(event.at)}  {event.kind.value}"
         if event.node is not None:
             line = f"{line}  {event.node}"
         typer.echo(line)
@@ -110,7 +108,6 @@ escalations_app = typer.Typer(no_args_is_help=True, add_completion=False)
 app.add_typer(approvals_app, name="approvals")
 app.add_typer(escalations_app, name="escalations")
 
-_WHEN = "%Y-%m-%dT%H:%M:%SZ"
 _CAUGHT = (StoreError, NotFound, AlreadyDecided, NotRegistered, ValueError, DecisionRefused)
 
 
@@ -143,7 +140,7 @@ def _session(work: Callable[[Settings, runtime.Runtime], None]) -> None:
 
 
 def _when(moment: datetime) -> str:
-    return moment.strftime(_WHEN)
+    return times.display(moment)
 
 
 def _args(value: object) -> str:

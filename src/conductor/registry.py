@@ -3,7 +3,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Literal
 
-from conductor.contracts import Contract
+from conductor.contracts.base import Contract, is_contract_type
 
 ActionKind = Literal["tool", "agent"]
 Effect = Literal["read", "propose", "write", "implement"]
@@ -99,7 +99,7 @@ def _bad_length(text: str) -> bool:
 
 
 def _is_contract(value: object) -> bool:
-    return isinstance(value, type) and issubclass(value, Contract)
+    return is_contract_type(value)
 
 
 def _check_domain(domain: Domain, seen: set[str], servers: dict[str, str]) -> None:

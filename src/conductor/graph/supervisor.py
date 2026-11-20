@@ -12,6 +12,7 @@ from pydantic import ValidationError
 from conductor import plancheck, policy
 from conductor.contracts import Contract, Escalation, FieldProblem, Plan, Route, problems_from
 from conductor.contracts.approvals import ApprovalDecision, ApprovalRequest, EscalationAnswer
+from conductor.contracts.base import is_request
 from conductor.events import EventKind, EventLog, JsonValue, check_run_id
 from conductor.graph import tracing_off
 from conductor.graph.status import (  # noqa: F401
@@ -110,7 +111,7 @@ def build_graph(services: Services, checkpointer: BaseCheckpointSaver) -> Compil
 
 
 def start_run(graph: CompiledStateGraph, request: str, *, run_id: str, log: EventLog) -> RunState:
-    if not request.strip() or len(request) > 2000:
+    if not is_request(request):
         raise ValueError(REQUEST_MESSAGE)
     if graph.get_state(_config(run_id)).created_at is not None:
         raise RunError(f"run {run_id} already exists")

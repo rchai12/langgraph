@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from string import Template
 from typing import Any
 
-from conductor.contracts import Contract
+from conductor.contracts.base import Contract, is_contract_type
 from conductor.llm.prompts import PromptError, load_template
 
 SEED = 7
@@ -55,7 +55,7 @@ class ModelRequest:
 
 
 def _is_contract(value: object) -> bool:
-    return isinstance(value, type) and issubclass(value, Contract)
+    return is_contract_type(value)
 
 
 def build_request(

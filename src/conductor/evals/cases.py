@@ -5,6 +5,7 @@ from datetime import date
 from pathlib import Path
 from typing import Any, Literal
 
+from conductor.contracts.base import is_request
 from conductor.registry import Registry
 
 _ID = re.compile(r"^[a-z0-9][a-z0-9-]{0,63}$")
@@ -60,7 +61,7 @@ def _case(
     if case_id in seen:
         raise CaseFileError(path, f"case {number}: id {case_id} is used twice")
     request = item.get("request")
-    if not isinstance(request, str) or not request.strip() or len(request) > 2000:
+    if not is_request(request):
         raise CaseFileError(path, f"case {number}: request must have 1 to 2000 characters")
     route = item.get("route")
     if route != "escalate" and route not in registry.names:

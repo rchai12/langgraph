@@ -6,6 +6,7 @@ from pydantic import Field, create_model
 
 from conductor import clock, plancheck
 from conductor.contracts import MAX_STEPS, Contract, Escalation, Plan, Step
+from conductor.contracts.base import RequestText
 from conductor.events import EventLog
 from conductor.llm.decide import InvalidModelOutput, decide, escalation_for
 from conductor.llm.model import Model, ModelUnavailable
@@ -20,7 +21,7 @@ PLAN_CONTEXT_TOKENS = 16384
 
 
 class PlanInputs(Contract):
-    request: str = Field(min_length=1, max_length=2000)
+    request: RequestText
 
 
 @dataclass(frozen=True)

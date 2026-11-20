@@ -5,7 +5,7 @@ from typing import cast
 from pydantic import Field, JsonValue, field_validator
 
 from conductor.contracts import Contract, Escalation
-from conductor.contracts.base import ActionName, JsonObject
+from conductor.contracts.base import ActionName, JsonObject, RequestText, is_request
 from conductor.contracts.plans import MAX_STEPS
 from conductor.events import EventLog
 from conductor.llm.decide import InvalidModelOutput, decide, escalation_for
@@ -27,7 +27,7 @@ class StepOutcome(Contract):
 
 
 class AnswerInputs(Contract):
-    request: str = Field(min_length=1, max_length=2000)
+    request: RequestText
     results: tuple[StepOutcome, ...] = Field(min_length=1, max_length=MAX_STEPS)
 
 
@@ -89,7 +89,7 @@ def answer_request(
     log: EventLog,
     run_id: str,
 ) -> Answered | Escalation:
-    if not request.strip() or len(request) > 2000:
+    if not is_request(request):
         raise ValueError(REQUEST_MESSAGE)
     if len(results) < 1 or len(results) > MAX_STEPS:
         raise ValueError(RESULTS_MESSAGE)

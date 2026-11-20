@@ -1,4 +1,3 @@
-import re
 import sqlite3
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -8,9 +7,10 @@ from typing import TypeVar
 
 from pydantic import ValidationError
 
-from conductor import clock, ids, private
+from conductor import clock, ids, private, times
 from conductor.contracts import Contract, Escalation
 from conductor.contracts.approvals import ApprovalDecision, ApprovalRequest, EscalationAnswer
+from conductor.contracts.base import is_id
 
 SCHEMA_VERSION = 1
 LEASE_SECONDS = 600
@@ -44,7 +44,6 @@ _SCHEMA = (
     )
     """,
 )
-_ID = re.compile(r"^[0-9a-f]{32}$")
 T = TypeVar("T")
 
 
@@ -330,14 +329,14 @@ def _prepare(path: Path) -> None:
 
 
 def _require_ids(thread_id: str, holder: str) -> None:
-    if _ID.fullmatch(thread_id) is None:
+    if not is_id(thread_id):
         raise ValueError(ID_MESSAGE)
-    if _ID.fullmatch(holder) is None:
+    if not is_id(holder):
         raise ValueError(ID_MESSAGE.replace("thread", "holder"))
 
 
 def _stamp(value: datetime) -> str:
-    return value.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+    return times.stored(value)
 
 
 def _instant(value: str) -> datetime:
