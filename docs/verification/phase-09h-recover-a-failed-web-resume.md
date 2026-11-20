@@ -2,6 +2,10 @@
 
 Spec: `docs/phases/phase-09h-recover-a-failed-web-resume.md`. Follow `docs/phase-conventions.md` ("For the verifier") for the procedure and the verdict. Write only `docs/reviews/phase-09h-recover-a-failed-web-resume.md`.
 
+## Correction 1 (2026-11-19)
+
+The spec's correction 1 fixes line 176 of the given file `tests/e2e/test_web_resume.py`: it now reads the stored approval's `decision`, since `Store.pending()` returns `ApprovalRequest` records without one. Every gate is live. The implementation is committed (2f72d34) and the correction has its own commit, so G5 and G6 may print nothing. Judge Scope against the spec's commit instead: `git diff 14aec28 --stat` lists the Scope paths, plus this correction's spec, guide and test edit, `history.md` and your report. The given files must equal the correction's commit, so G5 still applies as written.
+
 ## First: establish that the coder ran
 
 - No `## Phase 9h: ` entry in `docs/progress.md` and no Scope path changed: the coder did not run. Report it to the owner and write no review.

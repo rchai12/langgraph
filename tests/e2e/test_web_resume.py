@@ -173,7 +173,7 @@ def test_a_post_that_cannot_start_only_redirects(
     assert resumer.started == []
     if case == "undecided":
         [pending] = Store(get_settings().db_path).pending()
-        assert pending.decision is None
+        assert Store(get_settings().db_path).approval(pending.approval_id).decision is None
 
 
 @pytest.mark.parametrize(

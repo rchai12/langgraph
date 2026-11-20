@@ -1,5 +1,11 @@
 # Phase 9h: Recover a failed web resume
 
+## Corrections
+
+**2026-11-19, correction 1 (a given-test error, not the coder's).** `test_a_post_that_cannot_start_only_redirects[undecided]` read `pending.decision`. `Store.pending()` returns `ApprovalRequest` records, and they have no `decision`, so the test could not pass on any implementation. The coder stopped on it, correctly. Line 176 of `tests/e2e/test_web_resume.py` now reads the stored approval instead: `assert Store(get_settings().db_path).approval(pending.approval_id).decision is None`. The line before it, `[pending] = Store(get_settings().db_path).pending()`, is unchanged and still fails if the route records a decision. With this line, all 43 given tests pass on the committed implementation (2f72d34). No requirement, code, probe, other given test or count changes: N stays `1222` and the given count stays 43.
+
+Live again: every Acceptance row. Coverage and the full check never completed, so run them all. The implementation is committed, so continue from it: change nothing unless an Acceptance row fails, then rewrite your 9h progress entry with `scripts/progress.py` (it replaces the entry), removing the `Stopped:` item. `git status` then lists only the paths you change in this pass.
+
 ## Goal
 
 When a resume started from the approvals page fails, the owner can see that it failed and start it again from the page. Today the failure lives only in the server's memory, so a restart loses it, and the page has no way to resume a run whose decision is already recorded. After this phase `runtime.resume` writes one sanitized `error` event to the run's event log for an unexpected failure, the run page shows that failure after a restart, and the page offers a protected Resume button whenever the run can be resumed and no resume is running. The button reuses the recorded decision; it never records one. This implements audit findings 3 (a failed page resume cannot be recovered) and 1 (failure evidence that cleanup can erase).
