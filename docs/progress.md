@@ -270,5 +270,4 @@ The coding agent appends one entry per phase, in the form `docs/phase-convention
 - Deviations:
   - None
 - Follow-ups:
-  - Stopped: A5 | app.py lines 227 and 232 are covered only by a new test in the committed file tests/e2e/test_web_resume_more.py, so git diff HEAD -- tests prints that file | drop the tests path from that diff, or keep the coder test files untracked
-  - The suite and the three-file coverage are green at 1271 passed. A5 is the row that is not empty.
+  - None
