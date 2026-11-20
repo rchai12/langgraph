@@ -15,8 +15,9 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 from conductor import domains, runtime
 from conductor.config import Settings
 from conductor.decisions import answer_escalation, decide_approval, parse_json_object
-from conductor.graph.status import RunStateUnavailable
-from conductor.graph.supervisor import RunError
+from conductor.events import EventKind, EventLog, EventLogCorrupt, RunNotFound
+from conductor.graph.status import RunState, RunStateUnavailable
+from conductor.graph.supervisor import RunError, can_resume
 from conductor.policy import DecisionRefused
 from conductor.registry import NotRegistered, Registry
 from conductor.store import AlreadyDecided, NotFound, Store, StoreError
@@ -195,6 +196,46 @@ def _refused(request: Request, item_id: str, sent: str, settings: Settings) -> R
     return None
 
 
+_FIXED_FAILURE = "the resume failed"
+
+
+def _resumable(settings: Settings, found: RunState, busy: bool) -> bool:
+    if busy:
+        return False
+    try:
+        return can_resume(found, Store(settings.db_path))
+    except StoreError:
+        return False
+
+
+def _shown_failure(settings: Settings, run_id: str, kept: str | None, busy: bool) -> str | None:
+    if kept not in (None, _FIXED_FAILURE):
+        return kept
+    if not busy:
+        recorded = _recorded_type(settings, run_id)
+        if recorded is not None:
+            return f"{_FIXED_FAILURE} ({recorded})"
+    return kept
+
+
+def _recorded_type(settings: Settings, run_id: str) -> str | None:
+    try:
+        events = EventLog(settings.runs_dir).read(run_id)
+    except (RunNotFound, EventLogCorrupt, OSError):
+        return None
+    if not events:
+        return None
+    last = events[-1]
+    if last.kind is not EventKind.ERROR or last.node is not None:
+        return None
+    if last.payload.get("error") != runtime.RESUME_FAILED:
+        return None
+    name = last.payload.get("type")
+    if not isinstance(name, str):
+        return None
+    return name
+
+
 def create_app(settings: Settings, *, resumer: Resumer | None = None) -> ASGIApp:
     chosen = Resumer(settings) if resumer is None else resumer
     api = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
@@ -331,21 +372,46 @@ def create_app(settings: Settings, *, resumer: Resumer | None = None) -> ASGIApp
             return PlainTextResponse("The run state is not available", status_code=503)
         except RunError:
             return PlainTextResponse(_NOT_FOUND, status_code=404)
+        busy = chosen.running(run_id)
         return _page(
             templates,
             request,
             "run.html",
             {
-                "busy": chosen.running(run_id),
+                "run_id": run_id,
+                "busy": busy,
+                "resumable": _resumable(settings, found, busy),
                 "status": found.status,
                 "approval_id": found.approval_id,
                 "escalation_id": found.escalation_id,
                 "reply": found.reply,
                 "note": found.note,
                 "stopped_at": found.stopped_at,
-                "error": chosen.error(run_id),
+                "error": _shown_failure(settings, run_id, chosen.error(run_id), busy),
             },
         )
+
+    @api.post("/runs/{run_id}/resume")
+    async def post_resume(run_id: str, request: Request) -> Response:
+        sent, _note, _args = await _fields(request)
+        refused = _refused(request, run_id, sent, settings)
+        if refused is not None:
+            return refused
+        try:
+            found = runtime.read_state(settings, run_id)
+        except RunStateUnavailable:
+            return PlainTextResponse("The run state is not available", status_code=503)
+        except RunError:
+            return PlainTextResponse(_NOT_FOUND, status_code=404)
+        if chosen.running(run_id):
+            return RedirectResponse(f"/runs/{run_id}", status_code=303)
+        try:
+            allowed = can_resume(found, Store(settings.db_path))
+        except StoreError:
+            return PlainTextResponse(_STORE, status_code=503)
+        if allowed:
+            chosen.start(run_id)
+        return RedirectResponse(f"/runs/{run_id}", status_code=303)
 
     async def _post_approval(approval_id: str, request: Request, verdict: str) -> Response:
         sent, note, args_text = await _fields(request)

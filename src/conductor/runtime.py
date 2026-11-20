@@ -12,7 +12,7 @@ from conductor import domains, ids
 from conductor.config import Settings
 from conductor.contracts import Contract
 from conductor.domains import demo
-from conductor.events import EventLog, JsonValue, check_run_id
+from conductor.events import EventKind, EventLog, JsonValue, check_run_id
 from conductor.graph.status import RunStateUnavailable, checkpoint_state
 from conductor.graph.supervisor import (
     RunError,
@@ -33,6 +33,7 @@ from conductor.store import LeaseHeld, LeaseLost, Store
 
 DEMO_SUMMARY = "the demo agent does no work"
 MAX_RESULT_BYTES = 256 * 1024
+RESUME_FAILED = "resume_failed"
 
 
 class DemoRunner:
@@ -218,7 +219,7 @@ def resume(runtime: Runtime, run_id: str) -> RunState:
         runtime.store.acquire(run_id, runtime.holder)
     except LeaseHeld:
         raise RunError(f"run {run_id} is busy") from None
-    return _call(runtime, run_id, lambda: resume_run(runtime.graph, runtime.store, run_id))
+    return _call(runtime, run_id, lambda: _resume(runtime, run_id))
 
 
 def state(runtime: Runtime, run_id: str) -> RunState:
@@ -258,6 +259,22 @@ def read_state(settings: Settings, run_id: str) -> RunState:
     if isinstance(outcome, Exception):
         raise outcome
     return outcome
+
+
+def _resume(runtime: Runtime, run_id: str) -> RunState:
+    try:
+        return resume_run(runtime.graph, runtime.store, run_id)
+    except Exception as error:
+        if not isinstance(error, (RunError, LeaseLost)):
+            try:
+                runtime.log.append(
+                    run_id,
+                    EventKind.ERROR,
+                    payload={"error": RESUME_FAILED, "type": type(error).__name__},
+                )
+            except Exception:
+                pass
+        raise
 
 
 def _call(runtime: Runtime, run_id: str, call: Callable[[], RunState]) -> RunState:

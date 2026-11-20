@@ -27,7 +27,7 @@ from conductor.planning.answer import Answered, StepOutcome, answer_request
 from conductor.planning.plan import Planned, plan_request
 from conductor.registry import Action, Registry
 from conductor.routing.route import REQUEST_MESSAGE, Routed, route_request
-from conductor.store import Store
+from conductor.store import NotFound, Store
 
 RECURSION_LIMIT = 100
 RESUMABLE_STOPS = ("route", "plan", "answer")
@@ -117,6 +117,20 @@ def start_run(graph: CompiledStateGraph, request: str, *, run_id: str, log: Even
     log.append(run_id, EventKind.RUN_STARTED, payload={"request": request})
     _invoke(graph, {"request": request}, run_id)
     return run_state(graph, run_id)
+
+
+def can_resume(state: RunState, store: Store) -> bool:
+    if state.status == "stopped":
+        return state.stopped_at in RESUMABLE_STOPS
+    if state.status != "waiting":
+        return False
+    try:
+        if state.approval_id is not None:
+            return store.approval(state.approval_id).decision is not None
+        escalation_id = cast(str, state.escalation_id)
+        return store.escalation(escalation_id).answer is not None
+    except NotFound:
+        return False
 
 
 def resume_run(graph: CompiledStateGraph, store: Store, run_id: str) -> RunState:

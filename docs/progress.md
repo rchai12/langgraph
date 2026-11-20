@@ -262,3 +262,13 @@ The coding agent appends one entry per phase, in the form `docs/phase-convention
   - A no_digest entry keeps a valid capabilities list. An absent or invalid capabilities value is still empty.
 - Follow-ups:
   - None
+
+## Phase 9h: Recover a failed web resume (2026-11-19)
+- Tests: 1222 -> 1239 (given 43)
+- New public names: runtime: RESUME_FAILED; graph.supervisor: can_resume
+- Changed files: 7
+- Deviations:
+  - None
+- Follow-ups:
+  - Stopped: R7 tests/e2e/test_web_resume.py::test_a_post_that_cannot_start_only_redirects[undecided] | line 176 asserts pending.decision is None, and Store.pending() returns ApprovalRequest, which has no decision | change that assertion to the stored approval, or stop requiring the attribute
+  - check.py: 1239 passed, 1 failed. Coverage has no data because that step did not run. accept.py: A1 and A3 fail on the same assertion; A4 FAILURES 0; A5 empty; searches empty.

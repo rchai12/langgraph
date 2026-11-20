@@ -29,6 +29,12 @@
 <p>stopped</p>
 <p>{{ stopped_at }}</p>
 {% endif %}
+{% if resumable %}
+<form method="post" action="/runs/{{ run_id }}/resume">
+<input type="hidden" name="token" value="{{ token }}">
+<button type="submit">Resume</button>
+</form>
+{% endif %}
 {% if error %}
 <p>The last resume failed: {{ error }}</p>
 {% endif %}
