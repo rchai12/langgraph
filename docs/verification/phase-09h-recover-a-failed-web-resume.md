@@ -6,6 +6,10 @@ Spec: `docs/phases/phase-09h-recover-a-failed-web-resume.md`. Follow `docs/phase
 
 The spec's correction 1 fixes line 176 of the given file `tests/e2e/test_web_resume.py`: it now reads the stored approval's `decision`, since `Store.pending()` returns `ApprovalRequest` records without one. Every gate is live. The implementation is committed (2f72d34) and the correction has its own commit, so G5 and G6 may print nothing. Judge Scope against the spec's commit instead: `git diff 14aec28 --stat` lists the Scope paths, plus this correction's spec, guide and test edit, `history.md` and your report. The given files must equal the correction's commit, so G5 still applies as written.
 
+## Correction 2 (2026-11-19)
+
+The spec's correction 2 replaces G5 with two rows against fixed commits: G5 compares the given files and protected modules with 8872dcd, and G5b compares every existing test except the coder's two `*_more.py` files with 14aec28. The coder's addition to `tests/e2e/test_web_resume_more.py` in b37af73 is in scope (R11). Review 2 failed only on the stop that this corrects, and ran only the given tests, so every gate is live. Judge Scope with `git diff 14aec28 --stat`, which may also show both corrections' documents, `history.md` and the reviews.
+
 ## First: establish that the coder ran
 
 - No `## Phase 9h: ` entry in `docs/progress.md` and no Scope path changed: the coder did not run. Report it to the owner and write no review.
@@ -28,7 +32,8 @@ N is `1222`. Given count: 43. `.venv/bin/python scripts/accept.py --phase 9h --g
 | G2 | `.venv/bin/python -m coverage report --include='*/conductor/runtime.py,*/conductor/graph/supervisor.py,*/conductor/web/app.py' --fail-under=100` | exit 0, `TOTAL` at `100%` |
 | G3 | `.venv/bin/python -m pytest tests/integration/test_resume_evidence.py tests/unit/test_can_resume.py tests/e2e/test_web_resume.py --no-cov -q` | `43 passed` |
 | G4 | `.venv/bin/python docs/verification/probe-09h.py` | every check line starts `ok`; last line `FAILURES 0` |
-| G5 | `git diff HEAD --stat -- tests/integration/test_resume_evidence.py tests/unit/test_can_resume.py tests/e2e/test_web_resume.py docs/verification/probe-09h.py src/conductor/web/jobs.py src/conductor/events.py src/conductor/store.py src/conductor/decisions.py src/conductor/config.py tests` | no output |
+| G5 | `git diff 8872dcd --stat -- tests/integration/test_resume_evidence.py tests/unit/test_can_resume.py tests/e2e/test_web_resume.py docs/verification/probe-09h.py src/conductor/web/jobs.py src/conductor/events.py src/conductor/store.py src/conductor/decisions.py src/conductor/config.py` | no output |
+| G5b | `git diff 14aec28 --stat -- tests ':!tests/integration/test_resume_evidence_more.py' ':!tests/e2e/test_web_resume_more.py'` | exactly `tests/e2e/test_web_resume.py | 2 +-` (correction 1) and the summary line `1 file changed, 1 insertion(+), 1 deletion(-)` |
 | G6 | `git status --short --untracked-files=all` | only the Scope paths |
 | G7 | `grep -c '^## Phase 9h: ' docs/progress.md` | `1` |
 | G8 | `.venv/bin/python scripts/check_reports.py --phase 9h` | `Reports OK.` |

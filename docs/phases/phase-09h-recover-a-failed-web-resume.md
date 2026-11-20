@@ -6,6 +6,10 @@
 
 Live again: every Acceptance row. Coverage and the full check never completed, so run them all. The implementation is committed, so continue from it: change nothing unless an Acceptance row fails, then rewrite your 9h progress entry with `scripts/progress.py` (it replaces the entry), removing the `Stopped:` item. `git status` then lists only the paths you change in this pass.
 
+**2026-11-19, correction 2 (a spec error, not the coder's).** The diff row for given files ended in `tests`, on the assumption that the coder's two `*_more.py` files would stay untracked. The owner committed them after the first pass. The coder then added `test_an_empty_log_and_a_different_error_show_no_failure` to its own `tests/e2e/test_web_resume_more.py` to cover two branches of `_recorded_type`, as R11 requires, so the row could never be empty. That test is in scope. The row is now two rows against fixed commits, so they hold whether the work is committed or not: the given files and protected modules against 8872dcd, and every existing test except the coder's two files against 14aec28. Both rows give the intended result on b37af73. No code, test, requirement or count changes.
+
+Live again: every Acceptance row. Your last pass measured 1271 passed with coverage green, so run the Acceptance rows once more and rewrite your 9h entry with `scripts/progress.py`, removing the `Stopped:` item. Change no code or test unless a row fails.
+
 ## Goal
 
 When a resume started from the approvals page fails, the owner can see that it failed and start it again from the page. Today the failure lives only in the server's memory, so a restart loses it, and the page has no way to resume a run whose decision is already recorded. After this phase `runtime.resume` writes one sanitized `error` event to the run's event log for an unexpected failure, the run page shows that failure after a restart, and the page offers a protected Resume button whenever the run can be resumed and no resume is running. The button reuses the recorded decision; it never records one. This implements audit findings 3 (a failed page resume cannot be recovered) and 1 (failure evidence that cleanup can erase).
@@ -228,7 +232,8 @@ In `tests/e2e/test_web_resume_more.py` (section `core`):
 | `.venv/bin/python -m coverage report --include='*/conductor/runtime.py,*/conductor/graph/supervisor.py,*/conductor/web/app.py' --fail-under=100` (right after the check) | exit 0, `TOTAL` at `100%` |
 | `.venv/bin/python -m pytest tests/integration/test_resume_evidence.py tests/unit/test_can_resume.py tests/e2e/test_web_resume.py --no-cov -q` | `43 passed` |
 | `.venv/bin/python docs/verification/probe-09h.py` | every check line starts `ok`; last line `FAILURES 0` |
-| `git diff HEAD --stat -- tests/integration/test_resume_evidence.py tests/unit/test_can_resume.py tests/e2e/test_web_resume.py docs/verification/probe-09h.py src/conductor/web/jobs.py src/conductor/events.py src/conductor/store.py src/conductor/decisions.py src/conductor/config.py tests` | no output |
+| `git diff 8872dcd --stat -- tests/integration/test_resume_evidence.py tests/unit/test_can_resume.py tests/e2e/test_web_resume.py docs/verification/probe-09h.py src/conductor/web/jobs.py src/conductor/events.py src/conductor/store.py src/conductor/decisions.py src/conductor/config.py` | no output |
+| `git diff 14aec28 --stat -- tests ':!tests/integration/test_resume_evidence_more.py' ':!tests/e2e/test_web_resume_more.py'` | exactly `tests/e2e/test_web_resume.py | 2 +-` (correction 1) and the summary line `1 file changed, 1 insertion(+), 1 deletion(-)` |
 | `git status --short --untracked-files=all` | only the Scope paths |
 | `grep -c '^## Phase 9h: ' docs/progress.md` | `1` |
 | `.venv/bin/python scripts/check_reports.py --phase 9h` (after writing progress) | `Reports OK.` |
@@ -251,7 +256,7 @@ git grep --untracked -n -E 'jsonl|open\(' -- src/conductor/web
 git grep --untracked -n -E 'open_runtime|runtime\.resume' -- src/conductor/web/app.py
 ```
 
-The `tests` path in the diff row catches a changed existing test; the coder's two new test files are untracked, so they do not show there.
+The two diff rows compare against fixed commits: 8872dcd (correction 1) for the given files and protected modules, 14aec28 (this spec) for every existing test except the coder's two `*_more.py` files.
 
 ## Report
 
