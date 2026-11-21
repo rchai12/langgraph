@@ -75,7 +75,7 @@ Given test count: **{{var:GIVEN}}**.
 
 Each with its deciding input:
 
-- In `<path>`:
+- In `<path>` (the module's `test_<module>.py`, or a new `test_<module>_<behaviour>.py`; never `_more` or a phase id):
   - R<n>: <behaviour>, with <deciding input>.
 
 ## Rules for this phase

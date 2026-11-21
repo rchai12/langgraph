@@ -62,7 +62,7 @@ A different failure from "Broken" is a note for the architect; a pass is a findi
 ## 6. Reasonable variations
 
 These are correct even though the spec does not spell them out:
-- Private helpers inside the Scope modules, and extra behaviour tests in `*_more.py` files.
+- Private helpers inside the Scope modules, and extra behaviour tests in the module's test file or a behaviour-named one.
 - <list>
 
 ## 7. Out of scope

@@ -22,6 +22,7 @@ The tests are grouped into the sections of `tests/sections.toml`. Each spec name
 - Your check is `.venv/bin/python scripts/check.py --first <the spec's sections>`: its sections' tests run first, and the full run, coverage, and gates follow only once they all pass. Fix a failing section before anything else.
 - **When coverage falls short**, a behaviour has no test. Write a test that checks what the uncovered line or branch does, from the spec, not one that only runs it. If the line can never run, or the spec does not need it, remove it and say so in your progress entry. Never add `# pragma: no cover` (unless the spec allows one) and never change a given test to reach the number.
 - A new test file belongs in the section of the code it tests. If `core` would take it otherwise, add a pattern to `tests/sections.toml`, and list that file in your Scope.
+- Your tests go in the module's existing `test_<module>.py`, or in a new file named for the behaviour they cover (`test_<module>_<behaviour>.py`), the file the spec's "Tests to write" names. Never a name that says when it was added (`_more`, `_extra`, a phase id): `tests/unit/test_suite_layout.py` fails on one.
 
 ### Scope
 
