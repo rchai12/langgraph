@@ -457,12 +457,12 @@ def lint(spec_path: Path, guide_path: Path, clone: Path) -> int:
     for path in given:
         if not (clone / path).exists():
             problems.append(f"spec: given file {path} does not exist in the clone")
-    protected = " ".join(row[0] for row in accept_rows if "git diff HEAD --stat" in row[0])
+    # Given files are compared with the spec's own commit (9o), or with HEAD before 9p.
+    marks = ("git diff HEAD --stat", "git diff $(git log -1 --format=%h -- docs/phases/")
+    protected = " ".join(row[0] for row in accept_rows if any(m in row[0] for m in marks))
     for path in given:
         if path not in protected:
-            problems.append(
-                f"spec: given file {path} is missing from the `git diff HEAD --stat` row"
-            )
+            problems.append(f"spec: given file {path} is missing from the protected-diff row")
     if head is not None:
         probe = f"docs/verification/probe-{file_id(head.group(1))}.py"
         if probe not in given:

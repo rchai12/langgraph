@@ -158,7 +158,7 @@ Long-term memory (preferences, contacts, summaries of past threads, optionally r
 
 ## The event log
 
-`conductor/events.py` (critical module). Each event is `{run_id, seq, at, kind, node, payload}`: `seq` counts from 1 per run with no gaps, `at` is UTC with microseconds, and `payload` is any JSON value. Lines are written with sorted keys and flushed to disk before `append` returns. Reading a log checks every line and refuses a damaged one with its line number. The log is the record of what the agent did and why, and the source for replaying a run with `ScriptedModel`.
+`conductor/events.py` (critical module). Each event is `{run_id, seq, at, kind, node, payload}`: `seq` counts from 1 per run with no gaps, `at` is UTC with microseconds, and `payload` is any JSON value. Lines are written with sorted keys and flushed to disk before `append` returns. Each append holds an exclusive `flock` on the run's file from finding the next `seq` to the fsync, so logs in other threads or processes never repeat a `seq`; each log parses only the lines added since it last looked (Phase 9p), and a read holds a shared lock. Reading a log checks every line and refuses a damaged one with its line number. The log is the record of what the agent did and why, and the source for replaying a run with `ScriptedModel`.
 
 ### Specified next: status reads without a runtime (Phase 9e)
 
