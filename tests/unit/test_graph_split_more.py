@@ -4,7 +4,7 @@ import pytest
 
 from conductor.graph import steps
 from conductor.graph.supervisor import StepFailed
-from tests.integration.test_supervisor_more import (  # noqa: F401
+from tests.integration.test_supervisor_step_runs import (  # noqa: F401
     NOTE_PLAN,
     Runner,
     World,

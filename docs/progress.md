@@ -355,11 +355,10 @@ The coding agent appends one entry per phase, in the form `docs/phase-convention
   - None
 
 ## Phase 9t: Web and integration test families by behaviour (2026-11-21)
-- Tests: 1555 -> 1414 (given 26)
+- Tests: 1555 -> 1566 (given 26)
 - New public names: None
-- Changed files: 14
+- Changed files: 17
 - Deviations:
-  - Seven renames done with git mv; web_resume, mcp_client and runtime merged, supervisor left unmerged (see Stopped)
+  - The mcp_client fixture fake is renamed fake_moved in the moved part (within the spec); test_supervisor_more.py is renamed test_supervisor_step_runs.py and two importers change one import line each, per correction 1
 - Follow-ups:
-  - Stopped: test_supervisor_more.py merge into test_supervisor.py | tests/unit/test_graph_split_more.py and tests/integration/test_step_failure_events.py import NOTE_PLAN, Runner, World, fixed, DELEGATE_PLAN, ECHO_PLAN, MIXED_PLAN, RUN and more from tests.integration.test_supervisor_more, and the spec renames World and RUN in the moved part and forbids editing those two tests, so the merge breaks their collection; the supervisor pair is left unmerged | a spec correction that either adds those two importers to the Scope or changes how test_supervisor_more.py moves
-  - test_mcp_client merge: probe check 1 still names its 8 moved tests as having no twin although their ASTs match after the fixture rename and also with the fixture deleted; cause unknown without the probe source
+  - None

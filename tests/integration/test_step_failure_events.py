@@ -10,7 +10,7 @@ from conductor.events import EventKind
 from conductor.graph.supervisor import StepFailed
 from conductor.runtime import ask, open_runtime
 from tests.integration.test_mcp_steps import FAKE, LAB, approve_all, model, plan
-from tests.integration.test_supervisor_more import (
+from tests.integration.test_supervisor_step_runs import (
     DELEGATE_PLAN,
     ECHO_PLAN,
     MIXED_PLAN,
