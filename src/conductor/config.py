@@ -1,10 +1,13 @@
 import re
 import shlex
+from collections.abc import Mapping
 from pathlib import Path
+from types import MappingProxyType
 from urllib.parse import urlsplit
 
-from pydantic import ValidationError
+from pydantic import Field, ValidationError, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings.exceptions import SettingsError as EnvironmentSettingsError
 
 LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
 OLLAMA_HOST_MESSAGE = "must be an http address on this machine (127.0.0.1, localhost, or ::1)"
@@ -17,6 +20,8 @@ MCP_COMMAND_MESSAGE = "must be a command line"
 MCP_NAME_MESSAGE = "not a server name"
 MCP_MAPPING_MESSAGE = "must map server names to command lines"
 WEB_PORT_MESSAGE = "must be a port from 1024 to 65535"
+DATA_DIR_MESSAGE = "must be a folder path"
+NOT_A_SETTING_MESSAGE = "is not a setting"
 
 _SERVER_NAME = re.compile(r"^[a-z][a-z0-9_]{0,31}$")
 
@@ -26,7 +31,9 @@ class SettingsError(Exception):
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="CONDUCTOR_", env_nested_delimiter="__")
+    model_config = SettingsConfigDict(
+        env_prefix="CONDUCTOR_", env_nested_delimiter="__", frozen=True
+    )
 
     data_dir: Path = Path("data")
     ollama_host: str = "http://127.0.0.1:11434"
@@ -36,7 +43,12 @@ class Settings(BaseSettings):
     demo: str = "false"
     mcp_timeout: str = "60"
     web_port: str = "8766"
-    mcp: dict[str, str] = {}
+    mcp: Mapping[str, str] = Field(default_factory=dict, validate_default=True)
+
+    @field_validator("mcp", mode="after")
+    @classmethod
+    def _read_only(cls, value: Mapping[str, str]) -> Mapping[str, str]:
+        return MappingProxyType(dict(value))
 
     @property
     def runs_dir(self) -> Path:
@@ -73,18 +85,45 @@ class Settings(BaseSettings):
         return tuple(shlex.split(line))
 
 
+FIELD_MESSAGES = {
+    "data_dir": DATA_DIR_MESSAGE,
+    "ollama_host": OLLAMA_HOST_MESSAGE,
+    "model": MODEL_MESSAGE,
+    "model_timeout": TIMEOUT_MESSAGE,
+    "decided_by": DECIDED_BY_MESSAGE,
+    "demo": DEMO_MESSAGE,
+    "mcp_timeout": MCP_TIMEOUT_MESSAGE,
+    "web_port": WEB_PORT_MESSAGE,
+    "mcp": MCP_MAPPING_MESSAGE,
+}
+
+
+def validation_problems(error: ValidationError) -> list[str]:
+    """One constant line per failing field, from the error locations only."""
+    names = {str(item["loc"][0]) for item in error.errors()}
+    known = [
+        f"CONDUCTOR_{name.upper()}: {FIELD_MESSAGES[name]}"
+        for name in FIELD_MESSAGES
+        if name in names
+    ]
+    other = [
+        f"CONDUCTOR_{name.upper()}: {NOT_A_SETTING_MESSAGE}"
+        for name in sorted(names - set(FIELD_MESSAGES))
+    ]
+    return known + other
+
+
 def get_settings() -> Settings:
     try:
         settings = Settings()
-    except ValidationError:
+    except ValidationError as error:
+        raise SettingsError("; ".join(validation_problems(error))) from None
+    except EnvironmentSettingsError:
         raise SettingsError(f"CONDUCTOR_MCP: {MCP_MAPPING_MESSAGE}") from None
-    settings.data_dir = settings.data_dir.absolute()
     problems: list[str] = []
     parsed = urlsplit(settings.ollama_host)
     if parsed.scheme != "http" or parsed.hostname not in LOOPBACK_HOSTS:
         problems.append(f"CONDUCTOR_OLLAMA_HOST: {OLLAMA_HOST_MESSAGE}")
-    else:
-        settings.ollama_host = settings.ollama_host.rstrip("/")
     if settings.model.strip() == "":
         problems.append(f"CONDUCTOR_MODEL: {MODEL_MESSAGE}")
     timeout = settings.model_timeout
@@ -116,4 +155,9 @@ def get_settings() -> Settings:
             problems.append(f"{label}: {MCP_COMMAND_MESSAGE}")
     if problems:
         raise SettingsError("; ".join(problems))
-    return settings
+    return settings.model_copy(
+        update={
+            "data_dir": settings.data_dir.absolute(),
+            "ollama_host": settings.ollama_host.rstrip("/"),
+        }
+    )

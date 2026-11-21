@@ -326,3 +326,12 @@ The coding agent appends one entry per phase, in the form `docs/phase-convention
   - app.py imports NOT_FOUND from security and keeps a private _run_state helper returning RunState or a Response
 - Follow-ups:
   - None
+
+## Phase 9o: Immutable validated settings (2026-11-21)
+- Tests: 1480 -> 1518 (given 35)
+- New public names: config.py: FIELD_MESSAGES, DATA_DIR_MESSAGE, NOT_A_SETTING_MESSAGE, validation_problems
+- Changed files: 4
+- Deviations:
+  - None
+- Follow-ups:
+  - None

@@ -26,3 +26,4 @@ spotcheck.py
 private.py
 times.py
 web/security.py
+config.py
