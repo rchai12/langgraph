@@ -1,8 +1,6 @@
-import hmac
 import json
-import re
-import secrets
 from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -10,7 +8,7 @@ from fastapi.responses import PlainTextResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from starlette.responses import Response
-from starlette.types import ASGIApp, Message, Receive, Scope, Send
+from starlette.types import ASGIApp
 
 from conductor import domains, runtime, times
 from conductor.config import Settings
@@ -24,94 +22,62 @@ from conductor.registry import NotRegistered, Registry
 from conductor.store import AlreadyDecided, NotFound, Store, StoreError
 from conductor.views import escalation_lines, request_lines
 
+from . import security
 from .jobs import Resumer
+from .security import FORM_COOKIE, NOT_FOUND, SECURITY_HEADERS
 
-SECURITY_HEADERS = {
-    "content-security-policy": (
-        "default-src 'self'; script-src 'none'; style-src 'self'; img-src 'self'; "
-        "form-action 'self'; frame-ancestors 'none'; base-uri 'none'"
-    ),
-    "x-content-type-options": "nosniff",
-    "x-frame-options": "DENY",
-    "referrer-policy": "same-origin",
-    "cache-control": "no-store",
-}
-FORM_COOKIE = "conductor_form"
+__all__ = ["FORM_COOKIE", "SECURITY_HEADERS", "create_app"]
 
 _TEMPLATES = Path(__file__).parent / "templates"
-_HEADER_BYTES = [(name.encode(), value.encode()) for name, value in SECURITY_HEADERS.items()]
-_TOKEN = re.compile(r"^[0-9a-f]{64}$")
-_NOT_FOUND = "Not found"
 _STORE = "The store is not available"
 _ARGUMENTS = "The arguments must be a JSON object."
+_RUN_STATE = "The run state is not available"
+_BUTTONS = {
+    "approve": "Approve",
+    "reject": "Reject",
+    "edit": "Edit and approve",
+    "retry": "Retry",
+    "cancel": "Cancel",
+}
+_FIXED_FAILURE = "the resume failed"
 
 
-class _HostGuard:
-    """Refuse a request whose Host is not this server, and add the security headers."""
-
-    def __init__(self, app: ASGIApp, port: int) -> None:
-        self._app = app
-        self._hosts = {f"127.0.0.1:{port}".encode(), f"localhost:{port}".encode()}
-
-    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] != "http":
-            await self._app(scope, receive, send)
-            return
-
-        async def send_with_headers(message: Message) -> None:
-            if message["type"] == "http.response.start":
-                kept = [
-                    (name, value)
-                    for name, value in message["headers"]
-                    if name.lower().decode("latin-1") not in SECURITY_HEADERS
-                ]
-                message = {**message, "headers": [*kept, *_HEADER_BYTES]}
-            await send(message)
-
-        hosts = [value for name, value in scope["headers"] if name.lower() == b"host"]
-        if len(hosts) != 1 or hosts[0] not in self._hosts:
-            refused = PlainTextResponse("Bad host", status_code=400)
-            await refused(scope, receive, send_with_headers)
-            return
-        await self._app(scope, receive, send_with_headers)
+@dataclass(frozen=True)
+class Context:
+    settings: Settings
+    templates: Jinja2Templates
+    resumer: Resumer
 
 
-def _with_store(settings: Settings, read: Callable[[Store], Response]) -> Response:
+def _with_store(ctx: Context, read: Callable[[Store], Response]) -> Response:
     try:
-        return read(Store(settings.db_path))
+        return read(Store(ctx.settings.db_path))
     except NotFound:
-        return PlainTextResponse(_NOT_FOUND, status_code=404)
+        return PlainTextResponse(NOT_FOUND, status_code=404)
     except StoreError:
         return PlainTextResponse(_STORE, status_code=503)
 
 
-def _prepare(request: Request) -> tuple[str, bool]:
-    current = request.cookies.get(FORM_COOKIE, "")
-    if _TOKEN.fullmatch(current) is None:
-        return secrets.token_hex(32), True
-    return current, False
-
-
 def _page(
-    templates: Jinja2Templates,
+    ctx: Context,
     request: Request,
     name: str,
     context: dict[str, object],
     status_code: int = 200,
 ) -> Response:
-    token, fresh = _prepare(request)
-    response = templates.TemplateResponse(
+    token, fresh = security.form_token(request)
+    response = ctx.templates.TemplateResponse(
         request,
         name,
         {**context, "token": token},
         status_code=status_code,
     )
     if fresh:
-        response.set_cookie(FORM_COOKIE, token, httponly=True, samesite="strict", path="/")
+        security.set_form_cookie(response, token)
     return response
 
 
-def _home(store: Store, request: Request, templates: Jinja2Templates) -> Response:
+def _home(ctx: Context, store: Store, request: Request) -> Response:
     approvals = [
         {
             "approval_id": item.approval_id,
@@ -131,20 +97,11 @@ def _home(store: Store, request: Request, templates: Jinja2Templates) -> Respons
         for item in store.open_escalations()
     ]
     return _page(
-        templates,
+        ctx,
         request,
         "home.html",
         {"approvals": approvals, "escalations": escalations},
     )
-
-
-_BUTTONS = {
-    "approve": "Approve",
-    "reject": "Reject",
-    "edit": "Edit and approve",
-    "retry": "Retry",
-    "cancel": "Cancel",
-}
 
 
 def _form(action: str, args: str | None = None) -> dict[str, str | None]:
@@ -153,16 +110,16 @@ def _form(action: str, args: str | None = None) -> dict[str, str | None]:
 
 
 def _detail(
+    ctx: Context,
     lines: tuple[str, ...],
     forms: list[dict[str, str | None]],
     request: Request,
-    templates: Jinja2Templates,
 ) -> Response:
-    return _page(templates, request, "detail.html", {"lines": lines, "forms": forms})
+    return _page(ctx, request, "detail.html", {"lines": lines, "forms": forms})
 
 
 def _problem(
-    templates: Jinja2Templates,
+    ctx: Context,
     request: Request,
     status_code: int,
     message: str,
@@ -170,7 +127,7 @@ def _problem(
     back: str,
 ) -> Response:
     return _page(
-        templates,
+        ctx,
         request,
         "problem.html",
         {"message": message, "problems": problems, "back": back},
@@ -178,48 +135,58 @@ def _problem(
     )
 
 
-def _origins(settings: Settings) -> set[str]:
-    port = settings.web_port_number
-    return {f"http://127.0.0.1:{port}", f"http://localhost:{port}"}
+async def _fields(request: Request) -> tuple[str, str, str]:
+    form = await request.form()
+    return (
+        str(form.get("token") or ""),
+        str(form.get("note") or ""),
+        str(form.get("args") or ""),
+    )
 
 
-def _refused(request: Request, item_id: str, sent: str, settings: Settings) -> Response | None:
-    if not is_id(item_id):
-        return PlainTextResponse(_NOT_FOUND, status_code=404)
-    origin = request.headers.get("origin")
-    if origin is not None and origin not in _origins(settings):
-        return PlainTextResponse("Bad origin", status_code=403)
-    cookie = request.cookies.get(FORM_COOKIE, "")
-    if _TOKEN.fullmatch(cookie) is None or not hmac.compare_digest(cookie, sent):
-        return PlainTextResponse("Bad form token", status_code=403)
-    return None
+def _failed(ctx: Context, request: Request, error: Exception, back: str) -> Response:
+    if isinstance(error, NotFound):
+        return PlainTextResponse(NOT_FOUND, status_code=404)
+    if isinstance(error, AlreadyDecided):
+        return _problem(ctx, request, 409, str(error), (), back)
+    if isinstance(error, DecisionRefused):
+        return _problem(ctx, request, 400, str(error), error.problems, back)
+    if isinstance(error, (ValueError, NotRegistered)):
+        return _problem(ctx, request, 400, str(error), (), back)
+    return PlainTextResponse(_STORE, status_code=503)
 
 
-_FIXED_FAILURE = "the resume failed"
+def _run_state(ctx: Context, run_id: str) -> RunState | Response:
+    try:
+        return runtime.read_state(ctx.settings, run_id)
+    except RunStateUnavailable:
+        return PlainTextResponse(_RUN_STATE, status_code=503)
+    except RunError:
+        return PlainTextResponse(NOT_FOUND, status_code=404)
 
 
-def _resumable(settings: Settings, found: RunState, busy: bool) -> bool:
+def _resumable(ctx: Context, found: RunState, busy: bool) -> bool:
     if busy:
         return False
     try:
-        return can_resume(found, Store(settings.db_path))
+        return can_resume(found, Store(ctx.settings.db_path))
     except StoreError:
         return False
 
 
-def _shown_failure(settings: Settings, run_id: str, kept: str | None, busy: bool) -> str | None:
+def _shown_failure(ctx: Context, run_id: str, kept: str | None, busy: bool) -> str | None:
     if kept not in (None, _FIXED_FAILURE):
         return kept
     if not busy:
-        recorded = _recorded_type(settings, run_id)
+        recorded = _recorded_type(ctx, run_id)
         if recorded is not None:
             return f"{_FIXED_FAILURE} ({recorded})"
     return kept
 
 
-def _recorded_type(settings: Settings, run_id: str) -> str | None:
+def _recorded_type(ctx: Context, run_id: str) -> str | None:
     try:
-        events = EventLog(settings.runs_dir).read(run_id)
+        events = EventLog(ctx.settings.runs_dir).read(run_id)
     except (RunNotFound, EventLogCorrupt, OSError):
         return None
     if not events:
@@ -235,227 +202,213 @@ def _recorded_type(settings: Settings, run_id: str) -> str | None:
     return name
 
 
-def create_app(settings: Settings, *, resumer: Resumer | None = None) -> ASGIApp:
-    chosen = Resumer(settings) if resumer is None else resumer
-    api = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
-    templates = Jinja2Templates(
-        env=Environment(
-            loader=FileSystemLoader(_TEMPLATES),
-            autoescape=select_autoescape(["html"]),
-        )
+def home(ctx: Context, request: Request) -> Response:
+    return _with_store(ctx, lambda store: _home(ctx, store, request))
+
+
+def approval_page(ctx: Context, approval_id: str, request: Request) -> Response:
+    if not is_id(approval_id):
+        return PlainTextResponse(NOT_FOUND, status_code=404)
+
+    def read(store: Store) -> Response:
+        stored = store.approval(approval_id)
+        forms: list[dict[str, str | None]] = []
+        if stored.decision is None:
+            base = f"/approvals/{approval_id}"
+            forms.append(_form(f"{base}/approve"))
+            forms.append(_form(f"{base}/reject"))
+            if stored.request.stage == "step":
+                rendered = json.dumps(
+                    stored.request.steps[0].args, ensure_ascii=False, sort_keys=True
+                )
+                forms.append(_form(f"{base}/edit", rendered))
+        return _detail(ctx, request_lines(stored), forms, request)
+
+    return _with_store(ctx, read)
+
+
+def escalation_page(ctx: Context, escalation_id: str, request: Request) -> Response:
+    if not is_id(escalation_id):
+        return PlainTextResponse(NOT_FOUND, status_code=404)
+
+    def read(store: Store) -> Response:
+        stored = store.escalation(escalation_id)
+        forms: list[dict[str, str | None]] = []
+        if stored.answer is None:
+            base = f"/escalations/{escalation_id}"
+            forms.append(_form(f"{base}/retry"))
+            forms.append(_form(f"{base}/cancel"))
+        return _detail(ctx, escalation_lines(stored), forms, request)
+
+    return _with_store(ctx, read)
+
+
+def run_page(ctx: Context, run_id: str, request: Request) -> Response:
+    if not is_id(run_id):
+        return PlainTextResponse(NOT_FOUND, status_code=404)
+    found = _run_state(ctx, run_id)
+    if isinstance(found, Response):
+        return found
+    busy = ctx.resumer.running(run_id)
+    return _page(
+        ctx,
+        request,
+        "run.html",
+        {
+            "run_id": run_id,
+            "busy": busy,
+            "resumable": _resumable(ctx, found, busy),
+            "status": found.status,
+            "approval_id": found.approval_id,
+            "escalation_id": found.escalation_id,
+            "reply": found.reply,
+            "note": found.note,
+            "stopped_at": found.stopped_at,
+            "error": _shown_failure(ctx, run_id, ctx.resumer.error(run_id), busy),
+        },
     )
 
-    async def _fields(request: Request) -> tuple[str, str, str]:
-        form = await request.form()
-        return (
-            str(form.get("token") or ""),
-            str(form.get("note") or ""),
-            str(form.get("args") or ""),
-        )
 
-    def _failed(request: Request, error: Exception, back: str) -> Response:
-        if isinstance(error, NotFound):
-            return PlainTextResponse(_NOT_FOUND, status_code=404)
-        if isinstance(error, AlreadyDecided):
-            return _problem(templates, request, 409, str(error), (), back)
-        if isinstance(error, DecisionRefused):
-            return _problem(templates, request, 400, str(error), error.problems, back)
-        if isinstance(error, (ValueError, NotRegistered)):
-            return _problem(templates, request, 400, str(error), (), back)
+async def post_resume(ctx: Context, run_id: str, request: Request) -> Response:
+    sent, _note, _args = await _fields(request)
+    refused = security.check_post(request, run_id, sent, ctx.settings)
+    if refused is not None:
+        return refused
+    found = _run_state(ctx, run_id)
+    if isinstance(found, Response):
+        return found
+    if ctx.resumer.running(run_id):
+        return RedirectResponse(f"/runs/{run_id}", status_code=303)
+    try:
+        allowed = can_resume(found, Store(ctx.settings.db_path))
+    except StoreError:
         return PlainTextResponse(_STORE, status_code=503)
+    if allowed:
+        ctx.resumer.start(run_id)
+    return RedirectResponse(f"/runs/{run_id}", status_code=303)
 
-    def _record_approval(
-        request: Request, approval_id: str, verdict: str, note: str, edited: dict | None
-    ) -> Response:
-        back = f"/approvals/{approval_id}"
-        try:
-            store = Store(settings.db_path)
-            stored = store.approval(approval_id)
-            decide_approval(
-                store,
-                Registry(domains.registered(settings)),
-                approval_id,
-                verdict,  # type: ignore[arg-type]
-                channel="web",
-                decided_by=settings.decided_by,
-                note=note,
-                edited_args=edited,
-            )
-        except (
-            NotFound,
-            AlreadyDecided,
-            DecisionRefused,
-            ValueError,
-            NotRegistered,
-            StoreError,
-        ) as error:
-            return _failed(request, error, back)
-        chosen.start(stored.request.run_id)
-        return RedirectResponse(f"/runs/{stored.request.run_id}", status_code=303)
 
-    def _record_escalation(
-        request: Request, escalation_id: str, answer: str, note: str
-    ) -> Response:
-        back = f"/escalations/{escalation_id}"
-        try:
-            store = Store(settings.db_path)
-            stored = store.escalation(escalation_id)
-            answer_escalation(
-                store,
-                escalation_id,
-                answer,  # type: ignore[arg-type]
-                channel="web",
-                decided_by=settings.decided_by,
-                note=note,
+def record_and_resume(
+    ctx: Context, request: Request, back: str, record: Callable[[Store], str]
+) -> Response:
+    try:
+        run_id = record(Store(ctx.settings.db_path))
+    except (
+        NotFound,
+        AlreadyDecided,
+        DecisionRefused,
+        ValueError,
+        NotRegistered,
+        StoreError,
+    ) as error:
+        return _failed(ctx, request, error, back)
+    ctx.resumer.start(run_id)
+    return RedirectResponse(f"/runs/{run_id}", status_code=303)
+
+
+async def post_approval(ctx: Context, approval_id: str, request: Request, verdict: str) -> Response:
+    sent, note, args_text = await _fields(request)
+    refused = security.check_post(request, approval_id, sent, ctx.settings)
+    if refused is not None:
+        return refused
+    back = f"/approvals/{approval_id}"
+    edited = None
+    if verdict == "edit":
+        edited = parse_json_object(args_text)
+        if edited is None:
+            return _problem(ctx, request, 400, _ARGUMENTS, (), back)
+
+    def record(store: Store) -> str:
+        stored = store.approval(approval_id)
+        decide_approval(
+            store,
+            Registry(domains.registered(ctx.settings)),
+            approval_id,
+            verdict,  # type: ignore[arg-type]
+            channel="web",
+            decided_by=ctx.settings.decided_by,
+            note=note,
+            edited_args=edited,
+        )
+        return stored.request.run_id
+
+    return record_and_resume(ctx, request, back, record)
+
+
+async def post_escalation(
+    ctx: Context, escalation_id: str, request: Request, answer: str
+) -> Response:
+    sent, note, _args_text = await _fields(request)
+    refused = security.check_post(request, escalation_id, sent, ctx.settings)
+    if refused is not None:
+        return refused
+
+    def record(store: Store) -> str:
+        stored = store.escalation(escalation_id)
+        answer_escalation(
+            store,
+            escalation_id,
+            answer,  # type: ignore[arg-type]
+            channel="web",
+            decided_by=ctx.settings.decided_by,
+            note=note,
+        )
+        return stored.escalation.run_id
+
+    return record_and_resume(ctx, request, f"/escalations/{escalation_id}", record)
+
+
+def create_app(settings: Settings, *, resumer: Resumer | None = None) -> ASGIApp:
+    ctx = Context(
+        settings=settings,
+        templates=Jinja2Templates(
+            env=Environment(
+                loader=FileSystemLoader(_TEMPLATES),
+                autoescape=select_autoescape(["html"]),
             )
-        except (
-            NotFound,
-            AlreadyDecided,
-            DecisionRefused,
-            ValueError,
-            NotRegistered,
-            StoreError,
-        ) as error:
-            return _failed(request, error, back)
-        chosen.start(stored.escalation.run_id)
-        return RedirectResponse(f"/runs/{stored.escalation.run_id}", status_code=303)
+        ),
+        resumer=Resumer(settings) if resumer is None else resumer,
+    )
+    api = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 
     @api.get("/")
-    def home(request: Request) -> Response:
-        return _with_store(settings, lambda store: _home(store, request, templates))
+    def get_home(request: Request) -> Response:
+        return home(ctx, request)
 
     @api.get("/approvals/{approval_id}")
-    def approval(approval_id: str, request: Request) -> Response:
-        if not is_id(approval_id):
-            return PlainTextResponse(_NOT_FOUND, status_code=404)
-
-        def read(store: Store) -> Response:
-            stored = store.approval(approval_id)
-            forms: list[dict[str, str | None]] = []
-            if stored.decision is None:
-                base = f"/approvals/{approval_id}"
-                forms.append(_form(f"{base}/approve"))
-                forms.append(_form(f"{base}/reject"))
-                if stored.request.stage == "step":
-                    rendered = json.dumps(
-                        stored.request.steps[0].args, ensure_ascii=False, sort_keys=True
-                    )
-                    forms.append(_form(f"{base}/edit", rendered))
-            return _detail(request_lines(stored), forms, request, templates)
-
-        return _with_store(settings, read)
+    def get_approval(approval_id: str, request: Request) -> Response:
+        return approval_page(ctx, approval_id, request)
 
     @api.get("/escalations/{escalation_id}")
-    def escalation(escalation_id: str, request: Request) -> Response:
-        if not is_id(escalation_id):
-            return PlainTextResponse(_NOT_FOUND, status_code=404)
-
-        def read(store: Store) -> Response:
-            stored = store.escalation(escalation_id)
-            forms: list[dict[str, str | None]] = []
-            if stored.answer is None:
-                base = f"/escalations/{escalation_id}"
-                forms.append(_form(f"{base}/retry"))
-                forms.append(_form(f"{base}/cancel"))
-            return _detail(escalation_lines(stored), forms, request, templates)
-
-        return _with_store(settings, read)
+    def get_escalation(escalation_id: str, request: Request) -> Response:
+        return escalation_page(ctx, escalation_id, request)
 
     @api.get("/runs/{run_id}")
-    def run(run_id: str, request: Request) -> Response:
-        if not is_id(run_id):
-            return PlainTextResponse(_NOT_FOUND, status_code=404)
-        try:
-            found = runtime.read_state(settings, run_id)
-        except RunStateUnavailable:
-            return PlainTextResponse("The run state is not available", status_code=503)
-        except RunError:
-            return PlainTextResponse(_NOT_FOUND, status_code=404)
-        busy = chosen.running(run_id)
-        return _page(
-            templates,
-            request,
-            "run.html",
-            {
-                "run_id": run_id,
-                "busy": busy,
-                "resumable": _resumable(settings, found, busy),
-                "status": found.status,
-                "approval_id": found.approval_id,
-                "escalation_id": found.escalation_id,
-                "reply": found.reply,
-                "note": found.note,
-                "stopped_at": found.stopped_at,
-                "error": _shown_failure(settings, run_id, chosen.error(run_id), busy),
-            },
-        )
+    def get_run(run_id: str, request: Request) -> Response:
+        return run_page(ctx, run_id, request)
 
     @api.post("/runs/{run_id}/resume")
-    async def post_resume(run_id: str, request: Request) -> Response:
-        sent, _note, _args = await _fields(request)
-        refused = _refused(request, run_id, sent, settings)
-        if refused is not None:
-            return refused
-        try:
-            found = runtime.read_state(settings, run_id)
-        except RunStateUnavailable:
-            return PlainTextResponse("The run state is not available", status_code=503)
-        except RunError:
-            return PlainTextResponse(_NOT_FOUND, status_code=404)
-        if chosen.running(run_id):
-            return RedirectResponse(f"/runs/{run_id}", status_code=303)
-        try:
-            allowed = can_resume(found, Store(settings.db_path))
-        except StoreError:
-            return PlainTextResponse(_STORE, status_code=503)
-        if allowed:
-            chosen.start(run_id)
-        return RedirectResponse(f"/runs/{run_id}", status_code=303)
-
-    async def _post_approval(approval_id: str, request: Request, verdict: str) -> Response:
-        sent, note, args_text = await _fields(request)
-        refused = _refused(request, approval_id, sent, settings)
-        if refused is not None:
-            return refused
-        edited = None
-        if verdict == "edit":
-            edited = parse_json_object(args_text)
-            if edited is None:
-                return _problem(
-                    templates,
-                    request,
-                    400,
-                    _ARGUMENTS,
-                    (),
-                    f"/approvals/{approval_id}",
-                )
-        return _record_approval(request, approval_id, verdict, note, edited)
+    async def resume(run_id: str, request: Request) -> Response:
+        return await post_resume(ctx, run_id, request)
 
     @api.post("/approvals/{approval_id}/approve")
     async def approve(approval_id: str, request: Request) -> Response:
-        return await _post_approval(approval_id, request, "approve")
+        return await post_approval(ctx, approval_id, request, "approve")
 
     @api.post("/approvals/{approval_id}/reject")
     async def reject(approval_id: str, request: Request) -> Response:
-        return await _post_approval(approval_id, request, "reject")
+        return await post_approval(ctx, approval_id, request, "reject")
 
     @api.post("/approvals/{approval_id}/edit")
     async def edit(approval_id: str, request: Request) -> Response:
-        return await _post_approval(approval_id, request, "edit")
-
-    async def _post_escalation(escalation_id: str, request: Request, answer: str) -> Response:
-        sent, note, _args_text = await _fields(request)
-        refused = _refused(request, escalation_id, sent, settings)
-        if refused is not None:
-            return refused
-        return _record_escalation(request, escalation_id, answer, note)
+        return await post_approval(ctx, approval_id, request, "edit")
 
     @api.post("/escalations/{escalation_id}/retry")
     async def retry(escalation_id: str, request: Request) -> Response:
-        return await _post_escalation(escalation_id, request, "retry")
+        return await post_escalation(ctx, escalation_id, request, "retry")
 
     @api.post("/escalations/{escalation_id}/cancel")
     async def cancel(escalation_id: str, request: Request) -> Response:
-        return await _post_escalation(escalation_id, request, "cancel")
+        return await post_escalation(ctx, escalation_id, request, "cancel")
 
-    return _HostGuard(api, settings.web_port_number)
+    return security.HostGuard(api, settings.web_port_number)

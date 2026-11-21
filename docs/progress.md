@@ -317,3 +317,12 @@ The coding agent appends one entry per phase, in the form `docs/phase-convention
   - None
 - Follow-ups:
   - None
+
+## Phase 9n: Named web handlers (2026-11-21)
+- Tests: 1439 -> 1480 (given 38)
+- New public names: web/security.py: HostGuard, form_token, set_form_cookie, check_post, NOT_FOUND; web/app.py: Context, home, approval_page, escalation_page, run_page, post_resume, post_approval, post_escalation, record_and_resume
+- Changed files: 5
+- Deviations:
+  - app.py imports NOT_FOUND from security and keeps a private _run_state helper returning RunState or a Response
+- Follow-ups:
+  - None
