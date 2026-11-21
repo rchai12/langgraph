@@ -352,4 +352,4 @@ The coding agent appends one entry per phase, in the form `docs/phase-convention
 - Deviations:
   - In test_cli_approvals.py the moved part's NOTE, db fixture and FIRST are renamed NOTE_ONE, fresh_db and FIRST_ONE (the base defines FIRST, SECOND as a tuple, so FIRST is not the same code); renamed in the moved part only
 - Follow-ups:
-  - Stopped: probe-09q.py checks 1 and 2 | both print FAIL (FAILURES 2) with no detail; pytest --setup-plan fixture order for the moved tests is identical to 3983234 and the collected ids match, and the moved test ASTs match apart from the renames | the probe's per-test difference, or a corrected rule for the tuple FIRST, SECOND and the renamed NOTE_ONE, fresh_db and FIRST_ONE
+  - None
