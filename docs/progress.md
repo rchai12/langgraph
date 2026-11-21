@@ -335,3 +335,12 @@ The coding agent appends one entry per phase, in the form `docs/phase-convention
   - None
 - Follow-ups:
   - None
+
+## Phase 9p: Locked event appends (2026-11-21)
+- Tests: 1518 -> 1540 (given 19)
+- New public names: events.py: EventLog._discover
+- Changed files: 3
+- Deviations:
+  - append builds and serialises the event once before opening the file, so a refused payload or time never creates the run file (test_events.py pins that); under the lock it copies the event with the discovered seq
+- Follow-ups:
+  - None

@@ -1,3 +1,4 @@
+import fcntl
 import json
 import os
 from collections.abc import Mapping
@@ -110,7 +111,7 @@ def _event_line(event: Event) -> str:
 class EventLog:
     def __init__(self, folder: Path) -> None:
         self._folder = folder
-        self._counts: dict[str, int] = {}
+        self._seen: dict[str, tuple[int, int]] = {}
 
     def append(
         self,
@@ -121,21 +122,33 @@ class EventLog:
         payload: Mapping[str, JsonValue] | None = None,
     ) -> Event:
         run_id = check_run_id(run_id)
-        if run_id not in self._counts:
-            self._counts[run_id] = self._count_on_disk(run_id)
-        seq = self._counts[run_id] + 1
-        event = _event(run_id, seq, kind, node, payload)
-        line = _event_line(event)
-        self._write_line(run_id, line)
-        self._counts[run_id] = seq
+        draft = _event(run_id, 1, kind, node, payload)
+        _event_line(draft)  # a refused event must not create the file
+        path = self._folder / f"{run_id}.jsonl"
+        descriptor = private.open_file(path, os.O_RDWR | os.O_APPEND)
+        try:
+            fcntl.flock(descriptor, fcntl.LOCK_EX)
+            size, last = self._discover(run_id, descriptor)
+            event = draft.model_copy(update={"seq": last + 1})
+            raw = _event_line(event).encode("utf-8")
+            os.write(descriptor, raw)
+            os.fsync(descriptor)
+            self._seen[run_id] = (size + len(raw), event.seq)
+        finally:
+            os.close(descriptor)
         return event
 
     def read(self, run_id: str) -> list[Event]:
         run_id = check_run_id(run_id)
         path = self._folder / f"{run_id}.jsonl"
-        if not path.is_file():
-            raise RunNotFound(f"no run {run_id}")
-        pieces = path.read_bytes().split(b"\n")
+        try:
+            descriptor = os.open(path, os.O_RDONLY)
+        except FileNotFoundError:
+            raise RunNotFound(f"no run {run_id}") from None
+        with os.fdopen(descriptor, "rb") as handle:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_SH)
+            data = handle.read()
+        pieces = data.split(b"\n")
         if pieces[-1] == b"":
             del pieces[-1]
         return [_parse_line(run_id, number, piece) for number, piece in enumerate(pieces, start=1)]
@@ -154,20 +167,21 @@ class EventLog:
         found.sort(key=lambda summary: summary.started_at, reverse=True)
         return found
 
-    def _count_on_disk(self, run_id: str) -> int:
-        path = self._folder / f"{run_id}.jsonl"
-        if not path.is_file():
-            return 0
-        return len(self.read(run_id))
-
-    def _write_line(self, run_id: str, line: str) -> None:
-        path = self._folder / f"{run_id}.jsonl"
-        descriptor = private.open_file(path, os.O_WRONLY | os.O_APPEND)
-        try:
-            os.write(descriptor, line.encode("utf-8"))
-            os.fsync(descriptor)
-        finally:
-            os.close(descriptor)
+    def _discover(self, run_id: str, descriptor: int) -> tuple[int, int]:
+        """The file's size and last seq, parsing only the bytes this log has not seen."""
+        seen_size, last = self._seen.get(run_id, (0, 0))
+        size = os.fstat(descriptor).st_size
+        if size < seen_size:
+            raise EventLogCorrupt(f"{run_id}.jsonl is shorter than when it was last read")
+        if size > seen_size:
+            pieces = os.pread(descriptor, size - seen_size, seen_size).split(b"\n")
+            tail = pieces.pop()
+            for piece in pieces:
+                last = _parse_line(run_id, last + 1, piece).seq
+            if tail != b"":
+                raise EventLogCorrupt(f"{run_id}.jsonl line {last + 1} is not finished")
+        self._seen[run_id] = (size, last)
+        return size, last
 
 
 def _event(
