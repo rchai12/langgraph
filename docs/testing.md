@@ -27,6 +27,7 @@ Applies to every phase. Phase specs list the specific tests; this file sets the 
 
 A bug here lets the agent act without approval, lose its record, or accept output it should refuse, so every line and branch must be covered. The list lives in `scripts/critical_modules.txt` (paths relative to `src/conductor/`), which `scripts/check.py` reads; a phase that adds a critical module adds it there and here.
 
+- `config.py` (settings that refuse a model host off this machine, frozen once loaded; Phase 9o, listed in `critical_modules.txt` by its coder)
 - `events.py` (the event log; Phase 1)
 - `private.py` (owner-only folders and files under the data folder; Phase 9i)
 - `times.py` (the time written into every event line and stored row; Phase 9j, listed in `critical_modules.txt` by its coder)

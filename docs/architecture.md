@@ -208,7 +208,7 @@ conductor/
   docs/                         architecture, roadmap, phase specs, verification guides, reviews, progress
   scripts/check.py              every check a phase must pass
   src/conductor/
-    config.py                   Settings, get_settings() (Phase 1)
+    config.py                   Settings (frozen from 9o, critical), get_settings() (Phase 1)
     clock.py, ids.py            now() in UTC and new ids, read through one function each (Phase 1)
     times.py                    the display and stored time formats, UTC only (Phase 9j, critical)
     events.py                   the event log (Phase 1, critical)
