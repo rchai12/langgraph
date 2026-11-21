@@ -308,3 +308,12 @@ The coding agent appends one entry per phase, in the form `docs/phase-convention
   - None
 - Follow-ups:
   - None
+
+## Phase 9m: CLI command groups (2026-11-20)
+- Tests: 1404 -> 1439 (given 32)
+- New public names: cli.common: CAUGHT, bail, load_settings, report, with_store, with_runtime, dump, state_text, emit, decide_then_resume; cli.web: serve
+- Changed files: 9
+- Deviations:
+  - None
+- Follow-ups:
+  - None
