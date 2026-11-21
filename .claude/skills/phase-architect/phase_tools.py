@@ -63,7 +63,7 @@ SEARCHES: dict[str, tuple[str, str, str]] = {
         "network code only in llm/ (Ollama) and the CLI's web server",
         "git grep --untracked -n -E 'import (socket|ssl|http|requests|httpx|aiohttp|websockets)"
         "([^A-Za-z_]|$)|from (socket|ssl|http|requests|httpx|aiohttp|websockets)([^A-Za-z_]|$)"
-        "|urllib\\.request' -- src ':!src/conductor/llm' ':!src/conductor/cli/main.py'",
+        "|urllib\\.request' -- src ':!src/conductor/llm' ':!src/conductor/cli/web.py'",
         "import httpx",
     ),
     "hosted-model": (

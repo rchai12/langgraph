@@ -229,7 +229,7 @@ conductor/
     web/                        the approvals page (Phase 7)
     evals/                      the evaluation harness (Phase 8)
     domains/                    demo and finance (Phase 9; finance/ is a package from 9l); code is planned for Phase 10
-    cli/                        Typer commands
+    cli/                        Typer commands: main.py (doctor, ask, resume, wiring), one module per group, common.py (shared plumbing) from 9m
     views.py                    shared display rows
     reports.py                  progress/review validation (Phase 2, critical)
     acceptance.py, spotcheck.py phase tooling for scripts/accept.py and spot_check.py (critical)

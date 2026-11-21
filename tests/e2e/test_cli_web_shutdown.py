@@ -3,7 +3,7 @@ import socket
 import pytest
 import uvicorn
 
-from conductor.cli import main
+from conductor.cli import web
 from conductor.config import Settings
 from tests.support import run
 
@@ -41,8 +41,8 @@ def served(monkeypatch: pytest.MonkeyPatch) -> Served:
         if chosen.interrupt:
             raise KeyboardInterrupt
 
-    monkeypatch.setattr(main, "Resumer", FakeResumer)
-    monkeypatch.setattr(main, "create_app", fake_create_app)
+    monkeypatch.setattr(web, "Resumer", FakeResumer)
+    monkeypatch.setattr(web, "create_app", fake_create_app)
     monkeypatch.setattr(uvicorn, "run", fake_run)
     return chosen
 
