@@ -299,3 +299,12 @@ The coding agent appends one entry per phase, in the form `docs/phase-convention
   - None
 - Follow-ups:
   - None
+
+## Phase 9l: Finance catalog split (2026-11-20)
+- Tests: 1381 -> 1404 (given 21)
+- New public names: None
+- Changed files: 7
+- Deviations:
+  - None
+- Follow-ups:
+  - None
