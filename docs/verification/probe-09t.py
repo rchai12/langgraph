@@ -3,9 +3,11 @@
 The oracle is the test tree at b1b529e, the commit before the spec. Each test function is reduced
 to a canonical form: its code, with every module-level name it uses replaced by the canonical form
 of that name's definition (a helper, constant or fixture, whatever it is now called) and every
-imported name by what it imports. A moved test must have the same canonical form, run under the
-same autouse fixtures and module marks, and the whole suite must collect the same node ids with
-only the moved files' paths changed.
+imported name by what it imports. A name imported from another test module resolves to that
+module's definition on the same side (old or new), so a test that imports a fixture or constant
+equals one where the same definition sits in its own file. A moved test must have the same
+canonical form, run under the same autouse fixtures and module marks, and the whole suite must
+collect the same node ids with only the moved files' paths changed.
 Run from the repository root with .venv/bin/python docs/verification/probe-09t.py. The last line is
 FAILURES <n>.
 """
@@ -32,8 +34,7 @@ MOVES = {
     "integration/test_mcp_client_more.py": "integration/test_mcp_client.py",
     "integration/test_runtime.py": "integration/test_runtime.py",
     "integration/test_runtime_more.py": "integration/test_runtime.py",
-    "integration/test_supervisor.py": "integration/test_supervisor.py",
-    "integration/test_supervisor_more.py": "integration/test_supervisor.py",
+    "integration/test_supervisor_more.py": "integration/test_supervisor_step_runs.py",
     "e2e/test_web_decide_more.py": "e2e/test_web_decide_forms.py",
     "e2e/test_web_pages_more.py": "e2e/test_web_page_safety.py",
     "integration/test_mcp_steps_more.py": "integration/test_mcp_step_runners.py",
@@ -41,8 +42,11 @@ MOVES = {
     "integration/test_dollars_more.py": "integration/test_dollars_spending_run.py",
     "integration/test_finance_more.py": "integration/test_finance_prefixed_request.py",
     "integration/test_finance_proposals_more.py": "integration/test_finance_proposal_approvals.py",
+    # The two files that import from test_supervisor_more.py change only that import's module.
+    "integration/test_step_failure_events.py": "integration/test_step_failure_events.py",
+    "unit/test_graph_split_more.py": "unit/test_graph_split_more.py",
 }
-MOVED_TESTS = 86  # counted by the oracle over the old files: sum(len(Canon(old).tests()))
+MOVED_TESTS = 78  # counted by the oracle over the old files: sum(len(Canon(old).tests()))
 
 
 def check(label: str, ok: bool) -> None:
@@ -77,7 +81,8 @@ def without_docstring(node: ast.AST) -> ast.AST:
 class Canon:
     """Canonical forms of the definitions and tests of one test module."""
 
-    def __init__(self, source: str) -> None:
+    def __init__(self, source: str, load: Callable[[str], "Canon | None"] = lambda _: None) -> None:
+        self.load = load
         self.defs: dict[str, ast.AST] = {}
         self.imports: dict[str, str] = {}
         for node in ast.parse(source).body:
@@ -96,6 +101,15 @@ class Canon:
                     self.imports[alias.asname or alias.name] = f"{node.module}.{alias.name}"
         self.memo: dict[str, str] = {}
 
+    def owner(self, name: str) -> "tuple[Canon, str] | None":
+        """The module and name that define this name, following imports between test modules."""
+        if name in self.defs:
+            return self, name
+        target = self.imports.get(name, "")
+        module, _, attr = target.rpartition(".")
+        other = self.load(module) if module.startswith("tests.") else None
+        return other.owner(attr) if other is not None else None
+
     def ref(self, name: str) -> str:
         if name not in self.memo:
             self.memo[name] = "REC"
@@ -111,11 +125,11 @@ class Canon:
         return self.memo[name]
 
     def normal(self, node: ast.AST) -> str:
-        fixtures = {
-            arg.arg
-            for arg in ast.walk(node)
-            if isinstance(arg, ast.arg) and is_fixture(self.defs.get(arg.arg))
-        }
+        fixtures = set()
+        for arg in ast.walk(node):
+            if isinstance(arg, ast.arg) and (found := self.owner(arg.arg)) is not None:
+                if is_fixture(found[0].defs[found[1]]):
+                    fixtures.add(arg.arg)
         local = set()
         for inner in ast.walk(node):
             if isinstance(inner, ast.Name) and not isinstance(inner.ctx, ast.Load):
@@ -128,10 +142,11 @@ class Canon:
                 local.add(inner.name)
         for inner in ast.walk(node):
             if isinstance(inner, ast.arg) and inner.arg in fixtures:
-                inner.arg = self.ref(inner.arg)
+                module, name = self.owner(inner.arg)
+                inner.arg = module.ref(name)
             elif isinstance(inner, ast.Name) and inner.id not in local:
-                if inner.id in self.defs:
-                    inner.id = self.ref(inner.id)
+                if (found := self.owner(inner.id)) is not None:
+                    inner.id = found[0].ref(found[1])
                 elif inner.id in self.imports:
                     inner.id = "I:" + self.imports[inner.id]
         return ast.dump(node)
@@ -169,6 +184,15 @@ assert Canon(ORIGINAL).test("test_a") != Canon(ORIGINAL.replace("tmp_path)\n", "
     "test_a"
 )
 assert Canon(ORIGINAL).context() == []
+# A name imported from another test module is the same as that definition placed here.
+SHARED = {"tests.m": Canon("X = 1\nY = 2\n")}
+IMPORTED = "from tests.m import X\n\ndef test_a():\n    assert X\n"
+assert Canon(IMPORTED, SHARED.get).test("test_a") == Canon(
+    "X = 1\n\ndef test_a():\n    assert X\n"
+).test("test_a")
+assert Canon(IMPORTED, SHARED.get).test("test_a") != Canon(
+    "from tests.m import Y as X\n\ndef test_a():\n    assert X\n", SHARED.get
+).test("test_a")
 assert (
     len(Canon("import pytest\n@pytest.fixture(autouse=True)\ndef f():\n    pass\n").context()) == 1
 )
@@ -186,6 +210,33 @@ def new_source(path: str) -> str:
     return (ROOT / "tests" / path).read_text(encoding="utf-8")
 
 
+def loader(read: Callable[[str], str | None]) -> Callable[[str], Canon | None]:
+    """Load test modules by dotted name from one side, each parsed once."""
+    cache: dict[str, Canon | None] = {}
+
+    def load(module: str) -> Canon | None:
+        if module not in cache:
+            cache[module] = None
+            source = read(module.removeprefix("tests.").replace(".", "/") + ".py")
+            cache[module] = Canon(source, load) if source is not None else None
+        return cache[module]
+
+    return load
+
+
+def old_or_none(path: str) -> str | None:
+    result = subprocess.run(["git", "show", f"{BASE}:tests/{path}"], capture_output=True, text=True)
+    return result.stdout if result.returncode == 0 else None
+
+
+def new_or_none(path: str) -> str | None:
+    file = ROOT / "tests" / path
+    return file.read_text(encoding="utf-8") if file.exists() else None
+
+
+OLD, NEW = loader(old_or_none), loader(new_or_none)
+
+
 def sections_of(path: str) -> str:
     table = tomllib.loads((ROOT / "tests" / "sections.toml").read_text(encoding="utf-8"))
     for entry in table["section"]:
@@ -198,7 +249,7 @@ def moved_twins() -> bool:
     compared = 0
     same = True
     for old, new in MOVES.items():
-        before, after = Canon(old_source(old)), Canon(new_source(new))
+        before, after = Canon(old_source(old), OLD), Canon(new_source(new), NEW)
         same &= sections_of(old) == sections_of(new)
         for name in before.tests():
             compared += 1
@@ -215,7 +266,7 @@ def same_context() -> bool:
     compared = 0
     same = True
     for old, new in MOVES.items():
-        before, after = Canon(old_source(old)), Canon(new_source(new))
+        before, after = Canon(old_source(old), OLD), Canon(new_source(new), NEW)
         for name in before.tests():
             compared += 1
             same &= name in after.defs
@@ -247,13 +298,16 @@ def same_ids() -> bool:
     with tempfile.TemporaryDirectory() as folder:
         with tarfile.open(fileobj=io.BytesIO(archive)) as tar:
             tar.extractall(folder, filter="data")
-        before = collected(Path(folder))
+        before = {node for node in collected(Path(folder)) if not node.startswith(GIVEN + "::")}
     after = {node for node in collected(ROOT) if not node.startswith(GIVEN + "::")}
-    return len(before) >= 1500 and {moved_id(node) for node in before} == after
+    moved = {moved_id(node) for node in before}
+    for node in sorted(moved ^ after)[:10]:
+        print(f"     {node} is collected on {'today' if node in after else BASE} only")
+    return len(before) >= 1500 and moved == after
 
 
 section(
-    f"the {MOVED_TESTS} tests of the 11 families have identical twins at their new paths",
+    f"the {MOVED_TESTS} tests of the 11 families and 2 importers have identical twins at new paths",
     moved_twins,
 )
 section("every moved test runs under the same autouse fixtures and module marks", same_context)

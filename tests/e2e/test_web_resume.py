@@ -6,7 +6,9 @@ from fastapi.testclient import TestClient
 
 from conductor import clock, ids, runtime
 from conductor.config import get_settings
-from conductor.decisions import decide_approval
+from conductor.decisions import answer_escalation, decide_approval
+from conductor.events import EventKind, EventLog
+from conductor.graph.status import RunStateUnavailable
 from conductor.llm.model import ModelReply
 from conductor.llm.scripted import ScriptedModel, ScriptedReply, ScriptError
 from conductor.runtime import DemoRunner
@@ -242,3 +244,116 @@ def test_a_store_that_fails_hides_the_button_and_refuses_the_post(
     response = post(page, state.run_id)
     assert (response.status_code, response.text) == (503, "The store is not available")
     assert resumer.started == []
+
+
+EMPTY = '{"steps":[]}'
+
+
+FAILURE = "The last resume failed"
+
+
+class Raising_moved(ScriptedModel):
+    def __init__(self) -> None:
+        super().__init__([])
+
+    def chat(self, request: object) -> ModelReply:
+        raise RuntimeError("SYNTHETIC-SECRET")
+
+
+def post_moved(page: TestClient, run_id: str):
+    return page.post(
+        f"/runs/{run_id}/resume",
+        data={"token": TOKEN},
+        follow_redirects=False,
+    )
+
+
+def escalation(answered: bool) -> str:
+    with runtime.open_runtime(
+        get_settings(),
+        model=ScriptedModel([ScriptedReply("plan", ModelReply(content=EMPTY))]),
+    ) as opened:
+        state = runtime.ask(opened, "demo: do something")
+        if answered:
+            answer_escalation(
+                opened.store,
+                state.escalation_id,
+                "cancel",
+                channel="terminal",
+                decided_by="owner",
+            )
+    return state.run_id
+
+
+def failed_once_moved() -> str:
+    with runtime.open_runtime(get_settings(), model=ScriptedModel([])) as opened:
+        before = {item.run_id for item in opened.log.runs()}
+        with pytest.raises(ScriptError):
+            runtime.ask(opened, "demo: say hi")
+        [run] = [item for item in opened.log.runs() if item.run_id not in before]
+    run_id = run.run_id
+    with runtime.open_runtime(get_settings(), model=Raising_moved()) as opened:
+        with pytest.raises(RuntimeError):
+            runtime.resume(opened, run_id)
+    return run_id
+
+
+def test_an_answered_escalation_shows_the_button_and_an_open_one_does_not() -> None:
+    answered = escalation(True)
+    assert BUTTON in client(Still()).get(f"/runs/{answered}").text
+    open_run = escalation(False)
+    assert BUTTON not in client(Still()).get(f"/runs/{open_run}").text
+
+
+def test_a_missing_or_unreadable_state_is_refused(monkeypatch: pytest.MonkeyPatch) -> None:
+    page = client(Still())
+    missing = post_moved(page, "b" * 32)
+    assert (missing.status_code, missing.text) == (404, "Not found")
+
+    def unavailable(settings: object, run_id: str) -> None:
+        raise RunStateUnavailable(f"run {run_id} state is not available")
+
+    monkeypatch.setattr(runtime, "read_state", unavailable)
+    response = post_moved(page, "a" * 32)
+    assert (response.status_code, response.text) == (503, "The run state is not available")
+
+
+def test_a_broken_log_and_a_non_text_type_show_no_failure() -> None:
+    broken = failed_once_moved()
+    numbered = failed_once_moved()
+    path = get_settings().runs_dir / f"{broken}.jsonl"
+    path.write_text(path.read_text(encoding="utf-8") + "not json\n", encoding="utf-8")
+    broken_page = client(Still()).get(f"/runs/{broken}")
+    assert (broken_page.status_code, FAILURE in broken_page.text) == (200, False)
+
+    EventLog(get_settings().runs_dir).append(
+        numbered,
+        EventKind.ERROR,
+        payload={"error": "resume_failed", "type": 5},
+    )
+    numbered_page = client(Still()).get(f"/runs/{numbered}")
+    assert (numbered_page.status_code, FAILURE in numbered_page.text) == (200, False)
+
+
+def test_an_empty_log_and_a_different_error_show_no_failure() -> None:
+    empty = failed_once_moved()
+    other = failed_once_moved()
+    path = get_settings().runs_dir / f"{empty}.jsonl"
+    path.write_text("", encoding="utf-8")
+    empty_page = client(Still()).get(f"/runs/{empty}")
+    assert (empty_page.status_code, FAILURE in empty_page.text) == (200, False)
+
+    EventLog(get_settings().runs_dir).append(
+        other,
+        EventKind.ERROR,
+        payload={"error": "other", "type": "ValueError"},
+    )
+    other_page = client(Still()).get(f"/runs/{other}")
+    assert (other_page.status_code, FAILURE in other_page.text) == (200, False)
+
+
+def test_a_busy_run_keeps_the_record_off_the_page() -> None:
+    run_id = failed_once_moved()
+    text = client(Still(busy=True)).get(f"/runs/{run_id}").text
+    assert FAILURE not in text
+    assert BUTTON not in text
