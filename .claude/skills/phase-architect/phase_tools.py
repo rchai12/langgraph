@@ -196,6 +196,8 @@ def missing_imports(root: Path, tests: list[str]) -> dict[str, list[str]]:
     missing: dict[str, list[str]] = {}
 
     def need(source: str, name: str) -> None:
+        if name.startswith("__"):
+            return  # a module attribute every module has (`finance.__file__`)
         if name not in defined_names(root / source) and name not in missing.get(source, []):
             missing.setdefault(source, []).append(name)
 
