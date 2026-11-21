@@ -14,6 +14,8 @@ planning/plan.py
 planning/answer.py
 graph/supervisor.py
 graph/status.py
+graph/nodes.py
+graph/steps.py
 runtime.py
 mcp_client/client.py
 mcp_client/check.py

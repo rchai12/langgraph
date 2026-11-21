@@ -290,3 +290,12 @@ The coding agent appends one entry per phase, in the form `docs/phase-convention
   - A .JSONL name cannot sit beside the same .jsonl name on this case-insensitive volume, so that suffix is checked in its own folder.
 - Follow-ups:
   - None
+
+## Phase 9k: Smaller graph and structured failures (2026-11-20)
+- Tests: 1346 -> 1381 (given 32)
+- New public names: graph.steps: INVALID_RESULT, NOT_DONE_CODES, failure_fields, run_step; graph.nodes: build_nodes
+- Changed files: 6
+- Deviations:
+  - None
+- Follow-ups:
+  - None
