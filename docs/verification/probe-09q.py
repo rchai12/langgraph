@@ -34,7 +34,7 @@ MOVES = {
     "e2e/test_cli_tool_check_more.py": "e2e/test_cli_tool_check_commands.py",
     "e2e/test_cli_groups_more.py": "e2e/test_cli_decide_without_asking.py",
 }
-MOVED_TESTS = 56
+MOVED_TESTS = 47  # 12 + 7 approvals, 10 + 6 ask, 2 + 7 + 3 renamed (corrected from 56)
 
 
 def check(label: str, ok: bool) -> None:
@@ -194,7 +194,12 @@ def moved_twins() -> bool:
         same &= sections_of(old) == sections_of(new)
         for name in before.tests():
             compared += 1
-            same &= name in after.defs and before.test(name) == after.test(name)
+            twin = name in after.defs and before.test(name) == after.test(name)
+            if not twin:
+                print(f"     {old}::{name} has no identical twin in {new}")
+            same &= twin
+    if compared != MOVED_TESTS:
+        print(f"     compared {compared} tests, expected {MOVED_TESTS}")
     return same and compared == MOVED_TESTS
 
 
@@ -206,7 +211,11 @@ def same_context() -> bool:
         for name in before.tests():
             compared += 1
             same &= name in after.defs
-        same &= before.context() == after.context()
+        if before.context() != after.context():
+            print(f"     {new} runs under different autouse fixtures or marks than {old}")
+            same = False
+    if compared != MOVED_TESTS:
+        print(f"     compared {compared} tests, expected {MOVED_TESTS}")
     return same and compared == MOVED_TESTS
 
 

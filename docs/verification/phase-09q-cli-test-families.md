@@ -1,5 +1,7 @@
 # Verify Phase 9q: CLI test families by behaviour
 
+**Correction 1 (2026-11-21).** The probe expected 56 moved tests; the seven old files hold 47 (the base files of `test_cli_doctor_private` and `test_cli_tool_check` do not move). The probe now expects 47 and names each test without a twin, or the count, when a check fails. The coder stopped correctly on the old count. The coder's first-pass build was checked against the corrected probe: all three checks `ok`. Judge the build as usual; a stop on the old count is not a finding.
+
 Spec: `docs/phases/phase-09q-cli-test-families.md`. Follow `docs/phase-conventions.md` ("For the verifier") for the procedure and the verdict. Write only `docs/reviews/phase-09q-cli-test-families.md`.
 
 ## First: establish that the coder ran
@@ -62,7 +64,7 @@ The probe is the given file `docs/verification/probe-09q.py` (G4). Its oracle is
 - with a fixture parameter treated the same way.
 
 It checks:
-- the 56 test functions of the seven old files have twins of the same name and canonical form in their new files, and each new file is in the same section as the old one;
+- the 47 test functions of the seven old files have twins of the same name and canonical form in their new files, and each new file is in the same section as the old one;
 - the autouse fixtures and `pytestmark` of each old file have the same canonical forms in its new file;
 - the suite at 3983234 and today collect the same node ids, with the old paths mapped to the new ones and the given layout tests left out.
 

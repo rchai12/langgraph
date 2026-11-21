@@ -1,5 +1,11 @@
 # Phase 9q: CLI test families by behaviour
 
+## Corrections
+
+**2026-11-21, correction 1 (a probe error, not the coder's).** `docs/verification/probe-09q.py` expected to compare 56 moved tests. The seven old files hold 47: 12 + 7 in approvals, 10 + 6 in ask, and 2 + 7 + 3 in the renamed files. The 56 wrongly counted the base files of `test_cli_doctor_private` and `test_cli_tool_check`, which do not move. Checks 1 and 2 therefore printed `FAIL` on any correct build. The coder stopped on it, correctly. `MOVED_TESTS` is now 47. When a check fails, the probe now names each test without an identical twin, each file whose autouse fixtures or marks differ, and the count compared. Nothing else in the probe changed. On the coder's uncommitted first-pass build, all three checks print `ok` and the run ends `FAILURES 0`. The renames `NOTE_ONE`, `fresh_db` and `FIRST_ONE` are within the spec (a clashing name renamed in the moved part only). No requirement, given test, Scope path or count changes: N stays `1540` and the given count stays 15.
+
+Live again: every Acceptance row. Continue from your first-pass build and change nothing unless a row fails. Then rewrite your 9q progress entry with `scripts/progress.py` (it replaces the entry), removing the `Stopped:` item. Keep the renames as a deviation line.
+
 ## Goal
 
 `docs/testing.md` says a module's tests live in `test_<module>.py`. The tree has 47 test files named for when they were added (`test_store_more.py`, `test_eval_more_reports.py`), so the tests for one behaviour are spread over files whose names say nothing about it. This phase is the first of four slices that fold them back. It moves the five CLI families in `tests/e2e/` and changes no test.

@@ -344,3 +344,12 @@ The coding agent appends one entry per phase, in the form `docs/phase-convention
   - append builds and serialises the event once before opening the file, so a refused payload or time never creates the run file (test_events.py pins that); under the lock it copies the event with the discovered seq
 - Follow-ups:
   - None
+
+## Phase 9q: CLI test families by behaviour (2026-11-21)
+- Tests: 1540 -> 1555 (given 15)
+- New public names: None
+- Changed files: 8
+- Deviations:
+  - In test_cli_approvals.py the moved part's NOTE, db fixture and FIRST are renamed NOTE_ONE, fresh_db and FIRST_ONE (the base defines FIRST, SECOND as a tuple, so FIRST is not the same code); renamed in the moved part only
+- Follow-ups:
+  - Stopped: probe-09q.py checks 1 and 2 | both print FAIL (FAILURES 2) with no detail; pytest --setup-plan fixture order for the moved tests is identical to 3983234 and the collected ids match, and the moved test ASTs match apart from the renames | the probe's per-test difference, or a corrected rule for the tuple FIRST, SECOND and the renamed NOTE_ONE, fresh_db and FIRST_ONE
