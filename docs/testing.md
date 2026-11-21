@@ -49,6 +49,7 @@ A bug here lets the agent act without approval, lose its record, or accept outpu
 - `mcp_client/check.py` (a tool action runs only on the tool it says, and a `read` action only on a read-only tool; Phase 6b)
 - `web/app.py` (only this machine is answered, and nothing it shows can run as markup; Phase 7a)
 - `web/jobs.py` (a run resumed from the page runs under its lease, and its failure is kept, not lost; Phase 7b)
+- `web/security.py` (the Host guard, the security headers, the form cookie and the id, origin and token check on every post; Phase 9n, listed in `critical_modules.txt` by its coder)
 - `acceptance.py` and `spotcheck.py` (phase tooling: what `scripts/accept.py` runs and reports, and that `scripts/spot_check.py` always restores the module; workflow maintenance, 2026-11-18)
 
 ## Commands

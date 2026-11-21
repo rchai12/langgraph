@@ -226,7 +226,7 @@ conductor/
     graph/                      the supervisor graph (Phase 5); nodes.py and steps.py from 9k
     runtime.py                  checkpoints, leases and step runners (Phase 5, critical)
     mcp_client/                 MCP sessions scoped per domain (Phase 6)
-    web/                        the approvals page (Phase 7)
+    web/                        the approvals page (Phase 7): app.py (Context, named handlers, create_app), jobs.py, security.py (Host guard, headers, form token) from 9n
     evals/                      the evaluation harness (Phase 8)
     domains/                    demo and finance (Phase 9; finance/ is a package from 9l); code is planned for Phase 10
     cli/                        Typer commands: main.py (doctor, ask, resume, wiring), one module per group, common.py (shared plumbing) from 9m
