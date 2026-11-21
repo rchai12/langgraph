@@ -229,7 +229,17 @@ def test_a_rejected_step_logs_the_request_the_error_and_the_finish(tmp_path: Pat
     state = failed.start("demo: say hi")
     error = [event for event in failed.log.read(RUN) if event.kind == EventKind.ERROR]
     assert [(event.node, event.payload) for event in error] == [
-        ("run_step", {"step": 1, "error": "tool_error", "problems": []})
+        (
+            "run_step",
+            {
+                "step": 1,
+                "error": "tool_error",
+                "code": None,
+                "effect": "read",
+                "unknown_outcome": False,
+                "problems": [],
+            },
+        )
     ]
     failed.answer(state, "cancel")
     assert failed.resume().status == "cancelled"

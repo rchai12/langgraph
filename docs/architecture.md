@@ -54,6 +54,8 @@ Any node can **escalate**: the run records why, interrupts, and waits for the pe
 
 Built in Phase 5c (`graph/supervisor.py`, critical) with these rules, from a spike of langgraph 1.2.20: a resumed node runs again from its first line, so requests and escalations are created in their own nodes (`ask_plan`, `ask_step`, `record_escalation`) and the waiting nodes only read before `interrupt`; the resume value carries only an id, and the decision or answer is read from `conductor.db` and judged by the policy again; the state holds JSON only; steps run through an injected `StepRunner` and every result is parsed by its action's result contract (a failure escalates as `tool_error`, earlier steps are not undone); `Command(resume=...)` on an unknown thread would silently start a new run, so resuming checks first.
 
+Specified in Phase 9k (not built yet): the supervisor splits into `graph/steps.py` (failure codes, the `StepRunner` contract and running one step) and `graph/nodes.py` (`Services`, `State` and the ten nodes), both critical; `supervisor.py` keeps the wiring and the start, resume and state functions and re-exports every moved name. Node names, edges and interrupt boundaries do not change. A failed step's `run_step` ERROR event gains `code` (the runner's code, `invalid_result` for a result that does not fit, or null), `effect`, and `unknown_outcome`, true for a step that is not a read unless the code is `no_command`, `start_failed` or `tool_error` (owner decision, 2026-11-20). The escalation and its detail text are unchanged. See [the spec](phases/phase-09k-smaller-graph-and-structured-failures.md) and [verification guide](verification/phase-09k-smaller-graph-and-structured-failures.md).
+
 ### Route
 
 1. **Rules first** (pure code, `routing/rules.py`, critical): an explicit prefix (`finance: ...`, `code: ...`; the name of a registered domain, any case, then a colon), which is stripped before planning and always wins; then whole-word keyword phrases each domain declares as `Rule`s (no regular expressions; decided 2026-11-09). Rules of one domain that match route by its first matching rule, whose id (`<domain>.<rule>`, or `<domain>.prefix`) is recorded; rules of two domains that match escalate, as a request that needs two domains does.
@@ -213,7 +215,7 @@ conductor/
     decisions.py                record policy-validated decisions (Phase 4)
     policy.py                   which actions need approval (Phase 4, critical)
     routing/, planning/         rules and decision points (Phase 5)
-    graph/                      the supervisor graph (Phase 5)
+    graph/                      the supervisor graph (Phase 5); nodes.py and steps.py from 9k
     runtime.py                  checkpoints, leases and step runners (Phase 5, critical)
     mcp_client/                 MCP sessions scoped per domain (Phase 6)
     web/                        the approvals page (Phase 7)

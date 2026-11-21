@@ -194,20 +194,33 @@ def module_file(root: Path, module: str) -> str:
 def missing_imports(root: Path, tests: list[str]) -> dict[str, list[str]]:
     """Names the tests import from `conductor.<module>` that the module doesn't define yet."""
     missing: dict[str, list[str]] = {}
+
+    def need(source: str, name: str) -> None:
+        if name not in defined_names(root / source) and name not in missing.get(source, []):
+            missing.setdefault(source, []).append(name)
+
     for test in tests:
-        for node in ast.walk(ast.parse((root / test).read_text(encoding="utf-8"))):
+        tree = ast.parse((root / test).read_text(encoding="utf-8"))
+        submodules: dict[str, str] = {}
+        for node in ast.walk(tree):
             if not isinstance(node, ast.ImportFrom) or node.module is None:
                 continue
             if not node.module.startswith("conductor."):
                 continue
-            source = module_file(root, node.module)
-            have = defined_names(root / source)
             package = root / "src" / node.module.replace(".", "/")
             for alias in node.names:
                 if (package / f"{alias.name}.py").is_file() or (package / alias.name).is_dir():
-                    continue  # a submodule (`from conductor.domains import demo`), not a name
-                if alias.name not in have and alias.name not in missing.get(source, []):
-                    missing.setdefault(source, []).append(alias.name)
+                    # a submodule (`from conductor.graph import steps`): stub its `steps.NAME` uses
+                    submodules[alias.asname or alias.name] = f"{node.module}.{alias.name}"
+                    continue
+                need(module_file(root, node.module), alias.name)
+        for node in ast.walk(tree):
+            if (
+                isinstance(node, ast.Attribute)
+                and isinstance(node.value, ast.Name)
+                and node.value.id in submodules
+            ):
+                need(module_file(root, submodules[node.value.id]), node.attr)
     return missing
 
 
@@ -218,7 +231,12 @@ def stub_text(names: list[str]) -> str:
         if name.isupper():
             lines.append(f'{name} = "stub"')
         elif name[:1].isupper():
-            lines.append(f"class {name}(Exception):\n    pass")
+            # Accepts any keyword, so a test that builds one at collection time still collects.
+            lines.append(
+                f"class {name}(Exception):\n"
+                "    def __init__(self, *args, **kwargs):\n"
+                "        super().__init__(*args)"
+            )
         else:
             lines.append(f"def {name}(*args, **kwargs):\n    raise NotImplementedError")
     return "\n\n\n".join(lines) + "\n"
