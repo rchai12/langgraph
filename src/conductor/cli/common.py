@@ -61,23 +61,36 @@ def dump(value: object) -> None:
     typer.echo(json.dumps(value, ensure_ascii=False, indent=2))
 
 
-def state_text(opened: runtime.Runtime, found: RunState) -> str:
-    if found.status == "waiting" and found.approval_id is not None:
+def _waiting_text(opened: runtime.Runtime, found: RunState) -> str | None:
+    if found.status != "waiting":
+        return None
+    if found.approval_id is not None:
         block = "\n".join(request_lines(opened.store.approval(found.approval_id)))
         return (
             f"{block}\nNext: conductor approvals approve {found.approval_id}"
             " (or reject, or edit --args)"
         )
-    if found.status == "waiting" and found.escalation_id is not None:
+    if found.escalation_id is not None:
         block = "\n".join(escalation_lines(opened.store.escalation(found.escalation_id)))
         return f"{block}\nNext: conductor escalations retry {found.escalation_id} (or cancel)"
+    return None
+
+
+def _rejected_text(found: RunState) -> str:
+    line = f"run {found.run_id}  rejected"
+    if found.note:
+        return f"{line}\nnote: {found.note}"
+    return line
+
+
+def state_text(opened: runtime.Runtime, found: RunState) -> str:
+    waiting = _waiting_text(opened, found)
+    if waiting is not None:
+        return waiting
     if found.status == "done":
         return f"run {found.run_id}  done\n{found.reply}"
     if found.status == "rejected":
-        line = f"run {found.run_id}  rejected"
-        if found.note:
-            return f"{line}\nnote: {found.note}"
-        return line
+        return _rejected_text(found)
     if found.status == "cancelled":
         return f"run {found.run_id}  cancelled"
     return f"run {found.run_id}  stopped at {found.stopped_at}"

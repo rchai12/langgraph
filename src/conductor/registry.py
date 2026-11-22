@@ -155,6 +155,10 @@ def _check_action(domain_name: str, action: Action, seen: set[str], servers: set
         raise RegistryError(f"{where}: effect must be read, propose, write, or implement")
     if _TARGET.fullmatch(action.target) is None:
         raise RegistryError(f"{where}: target is not a valid name")
+    _check_action_links(where, action, servers)
+
+
+def _check_action_links(where: str, action: Action, servers: set[str]) -> None:
     if not _is_contract(action.args):
         raise RegistryError(f"{where}: args must be a Contract")
     if not _is_contract(action.result):

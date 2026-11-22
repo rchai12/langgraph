@@ -389,3 +389,12 @@ The coding agent appends one entry per phase, in the form `docs/phase-convention
   - None
 - Follow-ups:
   - None
+
+## Phase 9w: Guard-chain refactors for the complexity limits (2026-11-22)
+- Tests: 1614 -> 1619 (given 5)
+- New public names: None
+- Changed files: 6
+- Deviations:
+  - The private helper _blank in reports.py is deleted: the header table replaced its only callers, and the coverage gate refuses dead lines
+- Follow-ups:
+  - None

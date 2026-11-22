@@ -165,56 +165,61 @@ def _list_lines(items: tuple[str, ...]) -> str:
     return "".join(f"  - {item}\n" for item in items)
 
 
+_NOTHING = re.compile(r"")
+_FINDINGS_HEADING = re.compile(r"^## Findings$")
+_HEADER_ROWS = (
+    (_NOTHING, _EMPTY_MESSAGE),
+    (_VERDICT, _VERDICT_MESSAGE),
+    (_PASSED, _PASSED_MESSAGE),
+    (_FINDINGS_COUNT, _FINDINGS_COUNT_MESSAGE),
+    (_DEVIATIONS_TEXT, _DEVIATIONS_TEXT_MESSAGE),
+    (_ARCHITECT, _ARCHITECT_MESSAGE),
+    (_NOTHING, _EMPTY_MESSAGE),
+    (_FINDINGS_HEADING, _FINDINGS_HEADING_MESSAGE),
+    (_NOTHING, _EMPTY_MESSAGE),
+)
+
+
+def _header(lines: list[str], path: str, phase_text: str) -> Problem | tuple[re.Match[str], ...]:
+    if _at(lines, 0) != f"# Review: Phase {phase_text}":
+        return Problem(path, 1, f"expected `# Review: Phase {phase_text}`")
+    matches: list[re.Match[str]] = []
+    for index, (pattern, message) in enumerate(_HEADER_ROWS, start=1):
+        found = _fullmatch(lines, index, pattern)
+        if found is None:
+            return Problem(path, index + 1, message)
+        matches.append(found)
+    return tuple(matches[1:6])
+
+
+def _verdict_problem(
+    path: str, verdict: str, stated: int, findings: list[Finding]
+) -> Problem | None:
+    if stated != len(findings):
+        return Problem(path, 5, f"Findings says {stated} but {len(findings)} are listed")
+    if verdict == "PASS" and findings:
+        return Problem(path, 3, _PASS_FINDINGS_MESSAGE)
+    if verdict == "FAIL" and not findings:
+        return Problem(path, 3, _FAIL_FINDINGS_MESSAGE)
+    return None
+
+
 def parse_review(text: str, path: str) -> tuple[Review | None, list[Problem]]:
     lines = text.split("\n")
-    phase_text = phase_of(Path(path).name)
-    if phase_text is None:
-        phase_text = "<id>"
-    heading = _at(lines, 0)
-    if heading != f"# Review: Phase {phase_text}":
-        return None, [Problem(path, 1, f"expected `# Review: Phase {phase_text}`")]
-    problem = _blank(lines, 1, path)
-    if problem is not None:
-        return None, [problem]
-    verdict_found = _fullmatch(lines, 2, _VERDICT)
-    if verdict_found is None:
-        return None, [Problem(path, 3, _VERDICT_MESSAGE)]
+    phase_text = phase_of(Path(path).name) or "<id>"
+    header = _header(lines, path, phase_text)
+    if isinstance(header, Problem):
+        return None, [header]
+    verdict_found, passed_found, count_found, deviations_found, architect_found = header
     verdict: Literal["PASS", "FAIL"] = "PASS" if verdict_found.group(1) == "PASS" else "FAIL"
-    passed_found = _fullmatch(lines, 3, _PASSED)
-    if passed_found is None:
-        return None, [Problem(path, 4, _PASSED_MESSAGE)]
-    count_found = _fullmatch(lines, 4, _FINDINGS_COUNT)
-    if count_found is None:
-        return None, [Problem(path, 5, _FINDINGS_COUNT_MESSAGE)]
-    deviations_found = _fullmatch(lines, 5, _DEVIATIONS_TEXT)
-    if deviations_found is None:
-        return None, [Problem(path, 6, _DEVIATIONS_TEXT_MESSAGE)]
-    architect_found = _fullmatch(lines, 6, _ARCHITECT)
-    if architect_found is None:
-        return None, [Problem(path, 7, _ARCHITECT_MESSAGE)]
-    problem = _blank(lines, 7, path)
-    if problem is not None:
-        return None, [problem]
-    findings_heading = _at(lines, 8)
-    if findings_heading != "## Findings":
-        return None, [Problem(path, 9, _FINDINGS_HEADING_MESSAGE)]
-    problem = _blank(lines, 9, path)
-    if problem is not None:
-        return None, [problem]
     findings, index, problem = _findings(lines, 10, path)
+    if problem is None:
+        problem = _verdict_problem(path, verdict, int(count_found.group(1)), findings)
     if problem is not None:
         return None, [problem]
-    stated = int(count_found.group(1))
-    if stated != len(findings):
-        return None, [Problem(path, 5, f"Findings says {stated} but {len(findings)} are listed")]
-    if verdict == "PASS" and findings:
-        return None, [Problem(path, 3, _PASS_FINDINGS_MESSAGE)]
-    if verdict == "FAIL" and not findings:
-        return None, [Problem(path, 3, _FAIL_FINDINGS_MESSAGE)]
     repaired, index, problem = _closing(lines, index, _REPAIRED, _REPAIRED_MESSAGE, path)
-    if problem is not None:
-        return None, [problem]
-    built, _index, problem = _closing(lines, index, _BUILT, _BUILT_MESSAGE, path)
+    if problem is None:
+        built, _index, problem = _closing(lines, index, _BUILT, _BUILT_MESSAGE, path)
     if problem is not None:
         return None, [problem]
     review = Review(
@@ -281,12 +286,6 @@ def _fullmatch(lines: list[str], index: int, pattern: re.Pattern[str]) -> re.Mat
     return pattern.fullmatch(line)
 
 
-def _blank(lines: list[str], index: int, path: str) -> Problem | None:
-    if _at(lines, index) != "":
-        return Problem(path, index + 1, _EMPTY_MESSAGE)
-    return None
-
-
 def _heading(line: str) -> tuple[str, str, date] | str:
     found = _HEADING.fullmatch(line)
     if found is None:
@@ -323,41 +322,16 @@ def _items(
     return tuple(items), index
 
 
-def _one_entry(lines: list[str], index: int, path: str) -> Problem | tuple[ProgressEntry, int]:
-    heading_line = index + 1
-    parsed = _heading(lines[index])
-    if isinstance(parsed, str):
-        return Problem(path, heading_line, parsed)
-    phase, title, when = parsed
-    index += 1
-    tests = _take(lines, index, _TESTS, _TESTS_MESSAGE, path)
-    if isinstance(tests, Problem):
-        return tests
-    tests_found, index = tests
-    names = _take(lines, index, _NAMES, _NAMES_MESSAGE, path)
-    if isinstance(names, Problem):
-        return names
-    names_found, index = names
-    changed = _take(lines, index, _CHANGED, _CHANGED_MESSAGE, path)
-    if isinstance(changed, Problem):
-        return changed
-    changed_found, index = changed
-    deviations_head = _take(lines, index, _DEVIATIONS, _DEVIATIONS_MESSAGE, path)
-    if isinstance(deviations_head, Problem):
-        return deviations_head
-    _head, index = deviations_head
-    deviations = _items(lines, index, "Deviations", path)
-    if isinstance(deviations, Problem):
-        return deviations
-    deviation_items, index = deviations
-    follow_head = _take(lines, index, _FOLLOW_UPS, _FOLLOW_UPS_MESSAGE, path)
-    if isinstance(follow_head, Problem):
-        return follow_head
-    _head, index = follow_head
-    follow_ups = _items(lines, index, "Follow-ups", path)
-    if isinstance(follow_ups, Problem):
-        return follow_ups
-    follow_items, index = follow_ups
+def _list_section(
+    lines: list[str], index: int, pattern: re.Pattern[str], message: str, label: str, path: str
+) -> tuple[tuple[str, ...], int] | Problem:
+    head = _take(lines, index, pattern, message, path)
+    if isinstance(head, Problem):
+        return head
+    return _items(lines, head[1], label, path)
+
+
+def _after_entry(lines: list[str], index: int, path: str) -> int | Problem:
     while index < len(lines):
         if lines[index] == "":
             index += 1
@@ -365,6 +339,39 @@ def _one_entry(lines: list[str], index: int, path: str) -> Problem | tuple[Progr
         if lines[index].startswith("## "):
             break
         return Problem(path, index + 1, _UNEXPECTED_MESSAGE)
+    return index
+
+
+def _one_entry(lines: list[str], index: int, path: str) -> Problem | tuple[ProgressEntry, int]:
+    heading_line = index + 1
+    parsed = _heading(lines[index])
+    if isinstance(parsed, str):
+        return Problem(path, heading_line, parsed)
+    phase, title, when = parsed
+    index += 1
+    matches: list[re.Match[str]] = []
+    for pattern, message in (
+        (_TESTS, _TESTS_MESSAGE),
+        (_NAMES, _NAMES_MESSAGE),
+        (_CHANGED, _CHANGED_MESSAGE),
+    ):
+        taken = _take(lines, index, pattern, message, path)
+        if isinstance(taken, Problem):
+            return taken
+        found, index = taken
+        matches.append(found)
+    tests_found, names_found, changed_found = matches
+    deviations = _list_section(lines, index, _DEVIATIONS, _DEVIATIONS_MESSAGE, "Deviations", path)
+    if isinstance(deviations, Problem):
+        return deviations
+    deviation_items, index = deviations
+    follow_ups = _list_section(lines, index, _FOLLOW_UPS, _FOLLOW_UPS_MESSAGE, "Follow-ups", path)
+    if isinstance(follow_ups, Problem):
+        return follow_ups
+    follow_items, index = follow_ups
+    after = _after_entry(lines, index, path)
+    if isinstance(after, Problem):
+        return after
     entry = ProgressEntry(
         phase=phase,
         title=title,
@@ -378,7 +385,7 @@ def _one_entry(lines: list[str], index: int, path: str) -> Problem | tuple[Progr
         follow_ups=follow_items,
         line=heading_line,
     )
-    return entry, index
+    return entry, after
 
 
 def _resume(lines: list[str], heading_index: int, problem_line: int) -> int:

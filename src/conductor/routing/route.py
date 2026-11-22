@@ -54,17 +54,7 @@ def route_fields(registry: Registry) -> dict[str, str]:
     return {"domains": "\n".join(lines)}
 
 
-def route_request(
-    request: str,
-    registry: Registry,
-    *,
-    model: Model,
-    model_name: str,
-    log: EventLog,
-    run_id: str,
-) -> Routed | Escalation:
-    if not is_request(request):
-        raise ValueError(REQUEST_MESSAGE)
+def _settled(request: str, registry: Registry, run_id: str) -> Routed | Escalation | None:
     found = match_rules(request, registry)
     if isinstance(found, RuleRoute):
         if found.request == "":
@@ -86,6 +76,23 @@ def route_request(
         )
     if not registry.names:
         return Escalation(kind="unknown_route", detail=NO_DOMAINS_MESSAGE, run_id=run_id)
+    return None
+
+
+def route_request(
+    request: str,
+    registry: Registry,
+    *,
+    model: Model,
+    model_name: str,
+    log: EventLog,
+    run_id: str,
+) -> Routed | Escalation:
+    if not is_request(request):
+        raise ValueError(REQUEST_MESSAGE)
+    settled = _settled(request, registry, run_id)
+    if settled is not None:
+        return settled
     try:
         decision = decide(
             route_point(registry),

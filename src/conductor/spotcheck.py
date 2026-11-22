@@ -43,18 +43,18 @@ def verdict(output: str, code: int) -> str:
     if code == 0:
         return "passes"
     if code == 1:
-        message = _failure(output)
-        if message is None:
-            return "fails"
-        return f"fails: {message}"
+        return _with_message("fails", _failure(output), "fails")
     if code == 2:
-        message = _error_line(output)
-        if message is None:
-            return "error: collection"
-        return f"error: {message}"
+        return _with_message("error", _error_line(output), "error: collection")
     if code == 4 or code == 5:
         return "no test ran"
     return f"error: exit {code}"
+
+
+def _with_message(prefix: str, message: str | None, bare: str) -> str:
+    if message is None:
+        return bare
+    return f"{prefix}: {message}"
 
 
 def _failure(output: str) -> str | None:
