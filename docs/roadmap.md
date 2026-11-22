@@ -2,9 +2,9 @@
 
 Each phase is one coding session for a capable coding agent and ends with every check green. From Phase 2 on, a spec is about half the size of Phase 1 (about 10 requirements and 30 given tests), so most rows below become two or more lettered sub-phases (`2a`, `2b`, ...); numbers are never reused or renumbered. Specs are written one or two phases ahead, from the code that exists.
 
-Status (2026-11-21): Phases 1 to 8, 9a to 9q, 9t and 9u are built and verified (1581 tests). The verified findings in [codebase-audit.md](codebase-audit.md) are accepted planning input. Audit remediation continues before the coding pipeline: 9v is specified (`docs/phases/phase-09v-unit-test-families-second-half.md`) and waits for its coder; 9r and 9s remain planned and unspecified. From 9f on, specs commit their given files and probes instead of embedding them (`docs/phase-conventions.md`).
+Status (2026-11-22): Phases 1 to 8, 9a to 9q and 9t to 9v are built and verified (1597 tests). The verified findings in [codebase-audit.md](codebase-audit.md) are accepted planning input. Audit remediation continues before the coding pipeline: 9r is specified (`docs/phases/phase-09r-unused-argument-checks.md`) and waits for its coder; 9w and 9s remain planned and unspecified. From 9f on, specs commit their given files and probes instead of embedding them (`docs/phase-conventions.md`).
 
-**Build order:** 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9a–9d (complete) → 9e → 9f → 9g → 9h → 9i → 9j → 9k → 9l → 9m → 9n → 9o → 9p → 9q → 9t → 9u → 9v → 9r → 9s → 10 → 11; 12 and 13 when wanted; 14 (Discord approvals) after the shared Discord service contract exists, independently of 12/13. Existing phase numbers retain their meaning.
+**Build order:** 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9a–9d (complete) → 9e → 9f → 9g → 9h → 9i → 9j → 9k → 9l → 9m → 9n → 9o → 9p → 9q → 9t → 9u → 9v → 9r → 9w → 9s → 10 → 11; 12 and 13 when wanted; 14 (Discord approvals) after the shared Discord service contract exists, independently of 12/13. Existing phase numbers retain their meaning.
 
 | # | Phase | Outcome | Spec |
 |---|---|---|---|
@@ -32,8 +32,9 @@ Status (2026-11-21): Phases 1 to 8, 9a to 9q, 9t and 9u are built and verified (
 | 9q | CLI test families by behaviour | First of four slices folding phase-suffixed test files back by module/behaviour, preserving collected cases, assertions, section assignments and coverage, with the naming rule in testing docs, conventions and architect templates. Audit 7. Decided 2026-11-21: rules first, then four move slices (9q CLI e2e, 9t web e2e and integration, 9u and 9v unit); a suffixed file merges into `test_<module>.py`, or is renamed to a behaviour name when it has no base file or its autouse fixtures or `pytestmark` differ; test bodies AST-identical, clashing helpers renamed only in the moved part; given tests in behaviour-named files and a layout test refusing `_more`/phase-id names, with a `PENDING` list each slice shrinks | Built and verified (1555 tests) |
 | 9t | Web and integration test families | 9q's rules for `tests/e2e/test_web_*_more.py` and the eight `tests/integration` families. Audit 7. Architect 2026-11-21 under 9q's decisions: three merges (`test_web_resume`, `test_mcp_client`, `test_runtime`) and eight renames; autouse sameness judged after resolving names, so `test_mcp_steps` is renamed. Correction 1 (owner, 2026-11-21): `test_supervisor_more.py` is renamed `test_supervisor_step_runs.py`, not merged, because two other test files import its clashing names; they change only their import line | Built and verified (1566 tests) |
 | 9u | Unit test families, first half | 9q's rules for the alphabetical first fifteen of the 31 `tests/unit` families (`test_answer_more` to `test_mcp_runner_more`): seven merges and eight renames. Audit 7. Decided 2026-11-21: a file merges only into the file with its own stem, so `test_eval_more.py` is renamed rather than merged into `test_eval_run.py` | Built and verified (1581 tests) |
-| 9v | Unit test families, second half | 9q's rules for the remaining sixteen `tests/unit` families (`test_ollama_more` to `test_web_jobs_lifecycle_more`); the layout test's `PENDING` list ends empty. Audit 7 Decided 2026-11-21: from 9v the layout test's `MOVED` table lists tests each file must still hold, so later phases may add tests to these files | [phase-09v](phases/phase-09v-unit-test-families-second-half.md) (specified) |
-| 9r | Broader lint gates | Introduce unused-argument and complexity checks after the module splits, with explicit thresholds and reviewed behavior-preserving repairs. No blanket ignores or per-file exemptions to hide large modules. Use the installed Ruff; no new dependency is assumed. Audit 9 | Planned |
+| 9v | Unit test families, second half | 9q's rules for the remaining sixteen `tests/unit` families (`test_ollama_more` to `test_web_jobs_lifecycle_more`); the layout test's `PENDING` list ends empty. Audit 7 Decided 2026-11-21: from 9v the layout test's `MOVED` table lists tests each file must still hold, so later phases may add tests to these files | Built and verified (1597 tests) |
+| 9r | Unused-argument checks | Introduce unused-argument and complexity checks after the module splits, with explicit thresholds and reviewed behavior-preserving repairs. No blanket ignores or per-file exemptions to hide large modules. Use the installed Ruff; no new dependency is assumed. Audit 9. Decided 2026-11-22: two slices, `ARG` now and complexity in 9w; argument-count rules (`PLR0913`, `PLR0917`) stay out; an interface-required unused argument is renamed `_name`, moved to `usefixtures`, or kept with a per-line `noqa` only where the name is a contract (MCP tool schema, fixture, keyword-passed name) | [phase-09r](phases/phase-09r-unused-argument-checks.md) (specified) |
+| 9w | Complexity checks | Add `C901` at 10 and `PLR0911`, `PLR0912`, `PLR0915` at their defaults (6, 12, 50) to the Ruff selection, and refactor the 13 functions over them without changing behaviour. Split from 9r on 2026-11-22. Audit 9 | Planned |
 | 9s | Event-log listing | Reduce the whole-log scans `EventLog.runs()` makes for listings, with bounded memory and specified invalidation, keeping corruption detection and append-only records. Split from 9p on 2026-11-21. Audit 9 | Planned |
 | 10 | Coding pipeline | After audit remediation: coder and independent verifier adapters around external agents, the strict verdict parser (critical), automatic retry after FAIL (at most 2), escalation, commit and push as separately approved `write` actions. Persist and pass attempt/approved-implementation identity through State and `_ask_step`; only a verifier FAIL within that approved implementation skips renewed implementation approval. Any store schema change ships with a versioned migration and upgrade tests (audits 5, 6) | |
 | 11 | Replay | Re-run a logged run with `ScriptedModel` from its event log; turn a real run into a regression test | |
@@ -54,11 +55,11 @@ remediation specs remain to be written and validated one or two phases ahead fro
 the actual predecessor, following the normal size limits. Split an oversized row before
 writing given tests. In particular, 9q is a sequence of small test-family changes,
 not permission for a whole-suite rewrite in one coding session; allocate unused
-lettered phase ids after 9v for additional slices and update this build order.
+lettered phase ids after 9w for additional slices and update this build order.
 
 The sequential build order above is the delivery order. The important dependencies
 are: 9e before 9f/9h/9k; 9f and 9g before 9h; shared helpers 9i/9j before the
-CLI/web splits; 9k–9n before 9q/9r; 9q before 9t–9v; all remediation before Phase 10. Behavior
+CLI/web splits; 9k–9n before 9q/9r; 9r before 9w; 9q before 9t–9v; all remediation before Phase 10. Behavior
 changes have failing-first tests; pure extractions retain public contracts and
 meaningful regression assertions. Any remediation that changes the store schema must
 include a versioned migration and upgrade tests at that point, rather than wait
@@ -82,7 +83,7 @@ coverage list. Synthetic offline tests and the existing acceptance gates apply.
 | 9: misleading settings errors and mutable validated values | 9o: field-specific safe errors, normalization and mutation refusal |
 | 9: uncapped HTTP response reads | 9g: bounded tags/chat reads reject oversize responses without echoing their content |
 | 9: full event-log scans and duplicate sequence risk | 9p: synthetic multi-writer/reopen/corruption cases plus a listing/scan-cost regression check; preserve full corruption detection |
-| 9: narrow Ruff rules | 9r: new rules pass with concrete repairs and no blanket suppression |
+| 9: narrow Ruff rules | 9r (unused arguments) and 9w (complexity): new rules pass with concrete repairs and no blanket suppression |
 
 Keep the audit as the original evidence record. Its suggested exception-message
 retention is constrained by `AGENTS.md`: store constant error text and allowlisted
