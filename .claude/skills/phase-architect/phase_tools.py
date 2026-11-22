@@ -48,6 +48,7 @@ import shutil
 import subprocess
 import sys
 from collections import Counter
+from collections.abc import Callable
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -191,38 +192,45 @@ def module_file(root: Path, module: str) -> str:
     return base + ".py"
 
 
+def _is_submodule(package: Path, name: str) -> bool:
+    return (package / f"{name}.py").is_file() or (package / name).is_dir()
+
+
+def _wanted_names(root: Path, tree: ast.Module) -> list[tuple[str, str]]:
+    """(module file, name) for each name a test takes from `conductor.<module>`, in walk order."""
+    wanted: list[tuple[str, str]] = []
+    submodules: dict[str, str] = {}
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.ImportFrom) or not (node.module or "").startswith("conductor."):
+            continue
+        module = str(node.module)
+        package = root / "src" / module.replace(".", "/")
+        for alias in node.names:
+            if _is_submodule(package, alias.name):
+                # a submodule (`from conductor.graph import steps`): stub its `steps.NAME` uses
+                submodules[alias.asname or alias.name] = f"{module}.{alias.name}"
+            else:
+                wanted.append((module_file(root, module), alias.name))
+    for node in ast.walk(tree):
+        if (
+            isinstance(node, ast.Attribute)
+            and isinstance(node.value, ast.Name)
+            and node.value.id in submodules
+        ):
+            wanted.append((module_file(root, submodules[node.value.id]), node.attr))
+    return wanted
+
+
 def missing_imports(root: Path, tests: list[str]) -> dict[str, list[str]]:
     """Names the tests import from `conductor.<module>` that the module doesn't define yet."""
     missing: dict[str, list[str]] = {}
-
-    def need(source: str, name: str) -> None:
-        if name.startswith("__"):
-            return  # a module attribute every module has (`finance.__file__`)
-        if name not in defined_names(root / source) and name not in missing.get(source, []):
-            missing.setdefault(source, []).append(name)
-
     for test in tests:
         tree = ast.parse((root / test).read_text(encoding="utf-8"))
-        submodules: dict[str, str] = {}
-        for node in ast.walk(tree):
-            if not isinstance(node, ast.ImportFrom) or node.module is None:
-                continue
-            if not node.module.startswith("conductor."):
-                continue
-            package = root / "src" / node.module.replace(".", "/")
-            for alias in node.names:
-                if (package / f"{alias.name}.py").is_file() or (package / alias.name).is_dir():
-                    # a submodule (`from conductor.graph import steps`): stub its `steps.NAME` uses
-                    submodules[alias.asname or alias.name] = f"{node.module}.{alias.name}"
-                    continue
-                need(module_file(root, node.module), alias.name)
-        for node in ast.walk(tree):
-            if (
-                isinstance(node, ast.Attribute)
-                and isinstance(node.value, ast.Name)
-                and node.value.id in submodules
-            ):
-                need(module_file(root, submodules[node.value.id]), node.attr)
+        for source, name in _wanted_names(root, tree):
+            if name.startswith("__"):
+                continue  # a module attribute every module has (`finance.__file__`)
+            if name not in defined_names(root / source) and name not in missing.get(source, []):
+                missing.setdefault(source, []).append(name)
     return missing
 
 
@@ -432,11 +440,7 @@ def _first_span(cell: str) -> str:
     return found.group(1).replace("\\|", "|") if found else ""
 
 
-def lint(spec_path: Path, guide_path: Path, clone: Path) -> int:
-    from conductor.acceptance import read_rows
-
-    spec = spec_path.read_text(encoding="utf-8")
-    guide = guide_path.read_text(encoding="utf-8")
+def _wording_problems(spec: str, guide: str) -> list[str]:
     problems: list[str] = []
     for name, text in (("spec", spec), ("guide", guide)):
         for number, line in enumerate(text.splitlines(), start=1):
@@ -445,15 +449,13 @@ def lint(spec_path: Path, guide_path: Path, clone: Path) -> int:
             for word in BANNED:
                 if word in line.lower():
                     problems.append(f"{name}:{number}: banned wording {word!r}")
-    head = re.match(r"# Phase ([1-9][0-9]*[a-z]?): ", spec)
-    if head is None:
-        problems.append("spec:1: must start with '# Phase <id>: <title>'")
-    acceptance = section(spec, "## Acceptance")
-    accept_rows = table_rows(acceptance)
-    given_rows = table_rows(section(spec, "## Given files"))
-    given = [path for row in given_rows for path in paths_in(row[0])]
-    if not given_rows:
-        problems.append("spec: no `## Given files` table")
+    return problems
+
+
+def _given_problems(
+    clone: Path, given: list[str], accept_rows: list[list[str]], head: re.Match[str] | None
+) -> list[str]:
+    problems: list[str] = []
     for path in given:
         if not (clone / path).exists():
             problems.append(f"spec: given file {path} does not exist in the clone")
@@ -469,15 +471,27 @@ def lint(spec_path: Path, guide_path: Path, clone: Path) -> int:
             problems.append(f"spec: the probe {probe} is not a given file")
         if not any(f".venv/bin/python {probe}" in row[0] for row in accept_rows):
             problems.append(f"spec: acceptance does not run {probe}")
+    return problems
+
+
+def _spot_ids(guide: str) -> list[str]:
+    return re.findall(r"`(tests/[^`:]+\.py::[^`]+)`", guide)
+
+
+def _count_problems(
+    spec: str, guide: str, clone: Path, given_rows: list[list[str]], given: list[str]
+) -> tuple[list[str], dict[str, list[str]]]:
+    """Problems with the stated counts, and the collected ids of the given and spot-check tests."""
+    acceptance = section(spec, "## Acceptance")
+    # given files are tracked once the spec is committed; count them all
     tests = [path for path in given if Path(path).name.startswith("test_")]
-    new_tests = tests  # given files are tracked once the spec is committed; count them all
-    spot_ids = re.findall(r"`(tests/[^`:]+\.py::[^`]+)`", guide)
-    spot_files = sorted({test_id.partition("::")[0] for test_id in spot_ids} - set(new_tests))
-    ids = collected_ids(clone, new_tests + [path for path in spot_files if (clone / path).exists()])
-    total = sum(len(ids[path]) for path in new_tests)
+    spot_files = sorted({test_id.partition("::")[0] for test_id in _spot_ids(guide)} - set(tests))
+    ids = collected_ids(clone, tests + [path for path in spot_files if (clone / path).exists()])
+    total = sum(len(ids[path]) for path in tests)
+    problems: list[str] = []
     for row in given_rows:
         stated = re.search(r"([0-9]+) tests? from ([0-9]+) functions?", row[1])
-        files = [path for path in paths_in(row[0]) if path in new_tests]
+        files = [path for path in paths_in(row[0]) if path in tests]
         if len(files) != 1:
             continue
         found = (len(ids[files[0]]), functions_in(clone / files[0]))
@@ -497,12 +511,21 @@ def lint(spec_path: Path, guide_path: Path, clone: Path) -> int:
             )
     if f"`{total} passed`" not in acceptance:
         problems.append(f"spec: acceptance should name `{total} passed` for the given tests")
+    return problems, ids
+
+
+def _guide_problems(
+    spec: str, guide: str, accept_rows: list[list[str]], ids: dict[str, list[str]]
+) -> list[str]:
+    from conductor.acceptance import read_rows
+
+    problems: list[str] = []
     wanted = [_first_span(row[0]) for row in accept_rows]
     gates = [_first_span(row[1]) for row in table_rows(guide_section(guide, "Gates"))]
     if gates[: len(wanted)] != wanted:
         problems.append("guide: its first gates differ from the spec's acceptance commands")
     known = {line for found in ids.values() for line in found}
-    for test_id in spot_ids:
+    for test_id in _spot_ids(guide):
         if test_id not in known:
             problems.append(f"guide: {test_id} is not a collected test id")
     searches = search_commands(spec)
@@ -514,6 +537,25 @@ def lint(spec_path: Path, guide_path: Path, clone: Path) -> int:
         problems.append("spec: accept.py extracts different search commands")
     if [row.command for row in read_rows(guide, "Searches")] != searches:
         problems.append("guide: accept.py extracts different search commands")
+    return problems
+
+
+def lint(spec_path: Path, guide_path: Path, clone: Path) -> int:
+    spec = spec_path.read_text(encoding="utf-8")
+    guide = guide_path.read_text(encoding="utf-8")
+    problems = _wording_problems(spec, guide)
+    head = re.match(r"# Phase ([1-9][0-9]*[a-z]?): ", spec)
+    if head is None:
+        problems.append("spec:1: must start with '# Phase <id>: <title>'")
+    accept_rows = table_rows(section(spec, "## Acceptance"))
+    given_rows = table_rows(section(spec, "## Given files"))
+    given = [path for row in given_rows for path in paths_in(row[0])]
+    if not given_rows:
+        problems.append("spec: no `## Given files` table")
+    problems += _given_problems(clone, given, accept_rows, head)
+    counted, ids = _count_problems(spec, guide, clone, given_rows, given)
+    problems += counted
+    problems += _guide_problems(spec, guide, accept_rows, ids)
     for problem in problems:
         print(problem)
     print("Lint OK." if not problems else f"{len(problems)} problems.")
@@ -540,6 +582,29 @@ def promote(clone: Path, files: list[str], ignore: list[str]) -> int:
     lines = [line for line in done.stdout.splitlines() if line.strip()]
     print("Start:", lines[-1] if lines else "no output")
     return 1 if differ else 0
+
+
+def _searches(args: argparse.Namespace) -> int:
+    if args.plant is not None:
+        return plant_and_search(args.spec, args.cwd, args.plant)
+    return run_searches(args.spec, args.cwd)
+
+
+def _catalog(args: argparse.Namespace) -> int:
+    for name in args.names or DEFAULT_SEARCHES.split(","):
+        print(expand_search(name, args.modules))
+    return 0
+
+
+COMMANDS: dict[str, Callable[[argparse.Namespace], int]] = {
+    "clone": lambda args: make_clone(args.id, args.scratch),
+    "failcheck": lambda args: fail_check(args.clone, args.tests),
+    "stubcheck": lambda args: stub_check(args.clone, args.tests),
+    "searches": _searches,
+    "catalog": _catalog,
+    "lint": lambda args: lint(args.spec, args.guide, args.clone),
+    "promote": lambda args: promote(args.clone, args.files, args.ignore),
+}
 
 
 def main() -> int:
@@ -570,23 +635,7 @@ def main() -> int:
     given.add_argument("files", nargs="+")
     given.add_argument("--ignore", nargs="+", action="extend", default=[])
     args = parser.parse_args()
-    if args.command == "clone":
-        return make_clone(args.id, args.scratch)
-    if args.command == "failcheck":
-        return fail_check(args.clone, args.tests)
-    if args.command == "stubcheck":
-        return stub_check(args.clone, args.tests)
-    if args.command == "searches":
-        if args.plant is not None:
-            return plant_and_search(args.spec, args.cwd, args.plant)
-        return run_searches(args.spec, args.cwd)
-    if args.command == "catalog":
-        for name in args.names or DEFAULT_SEARCHES.split(","):
-            print(expand_search(name, args.modules))
-        return 0
-    if args.command == "lint":
-        return lint(args.spec, args.guide, args.clone)
-    return promote(args.clone, args.files, args.ignore)
+    return COMMANDS[args.command](args)
 
 
 if __name__ == "__main__":
