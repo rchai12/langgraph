@@ -21,7 +21,7 @@ Applies to every phase. Phase specs list the specific tests; this file sets the 
 6. **Every bug fix adds a test** that fails before the fix.
 7. **Coverage**: branch coverage on every run, overall at least 90%. Every line and branch of each critical module is covered; `scripts/check.py` checks it.
 8. **Expected values are literal**: whole lines and whole rows written out, never built by the code under test or by `str.format`.
-9. Tests for a module live in the matching layer folder, named `test_<module>.py`, or `test_<module>_<behaviour>.py` for one behaviour of it. A name says what the file covers, never when it was added: no `_more`, `_extra`, `_again` or phase-id suffix (`tests/unit/test_suite_layout.py` refuses one; its `PENDING` list holds the files 9v still folds back). Shared helpers live in `tests/support.py`.
+9. Tests for a module live in the matching layer folder, named `test_<module>.py`, or `test_<module>_<behaviour>.py` for one behaviour of it. A name says what the file covers, never when it was added: no `_more`, `_extra`, `_again` or phase-id suffix (`tests/unit/test_suite_layout.py` refuses one; its `MOVED` table lists, for each file 9q to 9v folded back, test functions the file must keep; tests may be added). Shared helpers live in `tests/support.py`.
 
 ## Critical modules
 
