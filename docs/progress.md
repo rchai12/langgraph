@@ -371,3 +371,12 @@ The coding agent appends one entry per phase, in the form `docs/phase-convention
   - Renamed names in moved parts take a _moved suffix (answer_moved in test_answer.py, db_moved in test_decisions.py)
 - Follow-ups:
   - None
+
+## Phase 9v: Unit test families by behaviour, second half (2026-11-21)
+- Tests: 1581 -> 1597 (given 57)
+- New public names: None
+- Changed files: 29
+- Deviations:
+  - Renamed names in moved parts take a _moved suffix (request_moved, answer_moved, Script_moved, script_moved, PASS_REVIEW_moved, ENTRY_1_moved, ENTRY_moved, OPEN_OUTPUT_moved)
+- Follow-ups:
+  - None
