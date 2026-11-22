@@ -113,6 +113,59 @@ def validation_problems(error: ValidationError) -> list[str]:
     return known + other
 
 
+def _bad_number(value: str, pattern: str, limit: int) -> bool:
+    return re.fullmatch(pattern, value) is None or int(value) > limit
+
+
+def _setting_problems(settings: Settings) -> list[str]:
+    parsed = urlsplit(settings.ollama_host)
+    rows = (
+        (
+            "CONDUCTOR_OLLAMA_HOST",
+            OLLAMA_HOST_MESSAGE,
+            parsed.scheme != "http" or parsed.hostname not in LOOPBACK_HOSTS,
+        ),
+        ("CONDUCTOR_MODEL", MODEL_MESSAGE, settings.model.strip() == ""),
+        (
+            "CONDUCTOR_MODEL_TIMEOUT",
+            TIMEOUT_MESSAGE,
+            _bad_number(settings.model_timeout, r"^[1-9][0-9]{0,3}$", 3600),
+        ),
+        (
+            "CONDUCTOR_DECIDED_BY",
+            DECIDED_BY_MESSAGE,
+            re.fullmatch(r"^[a-z][a-z0-9_]{0,31}$", settings.decided_by) is None,
+        ),
+        ("CONDUCTOR_DEMO", DEMO_MESSAGE, settings.demo not in ("true", "false")),
+        (
+            "CONDUCTOR_MCP_TIMEOUT",
+            MCP_TIMEOUT_MESSAGE,
+            _bad_number(settings.mcp_timeout, r"^[1-9][0-9]{0,2}$", 600),
+        ),
+        (
+            "CONDUCTOR_WEB_PORT",
+            WEB_PORT_MESSAGE,
+            _bad_number(settings.web_port, r"^[1-9][0-9]{3,4}$", 65535),
+        ),
+    )
+    return [f"{label}: {message}" for label, message, bad in rows if bad]
+
+
+def _mcp_problems(mcp: Mapping[str, str]) -> list[str]:
+    problems: list[str] = []
+    for key in sorted(mcp):
+        label = f"CONDUCTOR_MCP__{key.upper()}"
+        if _SERVER_NAME.fullmatch(key) is None:
+            problems.append(f"{label}: {MCP_NAME_MESSAGE}")
+        try:
+            parts = shlex.split(mcp[key])
+        except ValueError:
+            parts = ()
+        if not parts:
+            problems.append(f"{label}: {MCP_COMMAND_MESSAGE}")
+    return problems
+
+
 def get_settings() -> Settings:
     try:
         settings = Settings()
@@ -120,39 +173,7 @@ def get_settings() -> Settings:
         raise SettingsError("; ".join(validation_problems(error))) from None
     except EnvironmentSettingsError:
         raise SettingsError(f"CONDUCTOR_MCP: {MCP_MAPPING_MESSAGE}") from None
-    problems: list[str] = []
-    parsed = urlsplit(settings.ollama_host)
-    if parsed.scheme != "http" or parsed.hostname not in LOOPBACK_HOSTS:
-        problems.append(f"CONDUCTOR_OLLAMA_HOST: {OLLAMA_HOST_MESSAGE}")
-    if settings.model.strip() == "":
-        problems.append(f"CONDUCTOR_MODEL: {MODEL_MESSAGE}")
-    timeout = settings.model_timeout
-    if re.fullmatch(r"^[1-9][0-9]{0,3}$", timeout) is None or int(timeout) > 3600:
-        problems.append(f"CONDUCTOR_MODEL_TIMEOUT: {TIMEOUT_MESSAGE}")
-    if re.fullmatch(r"^[a-z][a-z0-9_]{0,31}$", settings.decided_by) is None:
-        problems.append(f"CONDUCTOR_DECIDED_BY: {DECIDED_BY_MESSAGE}")
-    if settings.demo not in ("true", "false"):
-        problems.append(f"CONDUCTOR_DEMO: {DEMO_MESSAGE}")
-    if (
-        re.fullmatch(r"^[1-9][0-9]{0,2}$", settings.mcp_timeout) is None
-        or int(settings.mcp_timeout) > 600
-    ):
-        problems.append(f"CONDUCTOR_MCP_TIMEOUT: {MCP_TIMEOUT_MESSAGE}")
-    if (
-        re.fullmatch(r"^[1-9][0-9]{3,4}$", settings.web_port) is None
-        or int(settings.web_port) > 65535
-    ):
-        problems.append(f"CONDUCTOR_WEB_PORT: {WEB_PORT_MESSAGE}")
-    for key in sorted(settings.mcp):
-        label = f"CONDUCTOR_MCP__{key.upper()}"
-        if _SERVER_NAME.fullmatch(key) is None:
-            problems.append(f"{label}: {MCP_NAME_MESSAGE}")
-        try:
-            parts = shlex.split(settings.mcp[key])
-        except ValueError:
-            parts = ()
-        if not parts:
-            problems.append(f"{label}: {MCP_COMMAND_MESSAGE}")
+    problems = _setting_problems(settings) + _mcp_problems(settings.mcp)
     if problems:
         raise SettingsError("; ".join(problems))
     return settings.model_copy(

@@ -398,3 +398,12 @@ The coding agent appends one entry per phase, in the form `docs/phase-convention
   - The private helper _blank in reports.py is deleted: the header table replaced its only callers, and the coverage gate refuses dead lines
 - Follow-ups:
   - None
+
+## Phase 9x: Complexity refactors and rules (2026-11-22)
+- Tests: 1619 -> 1626 (given 7)
+- New public names: None
+- Changed files: 8
+- Deviations:
+  - create_app is only partly refactored: the context build moved to a private _context helper, but the ten route functions stay nested in create_app
+- Follow-ups:
+  - Stopped: R1 create_app under C901 10 | tests/unit/test_web_layout.py::test_create_app_only_registers_one_line_routes requires exactly ten one-line route functions nested directly in create_app, and ruff counts each nested function as 1, so create_app stays at 11 with the Part 1 helpers the spec suggests | the owner changes that test (or the limit for create_app), or the spec allows another way to register the routes

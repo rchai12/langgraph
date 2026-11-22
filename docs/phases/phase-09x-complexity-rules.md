@@ -1,5 +1,48 @@
 # Phase 9x: Complexity refactors and rules
 
+## Corrections
+
+**2026-11-22, correction 1 (a spec error, not the coder's).** The coder stopped, correctly, on R1 for `create_app`. `tests/unit/test_web_layout.py::test_create_app_only_registers_one_line_routes` (Phase 9n) requires all ten one-line route functions to be nested directly in `create_app`. Ruff adds 1 for each nested function, so `create_app` cannot get under `C901` 10 while that test stands. The architect had not searched the tests for one that pins `create_app`'s shape.
+
+Decided with the owner (2026-11-22): the ten routes move into two private helpers in `src/conductor/web/app.py`, and the 9n test is edited to count them there. The test keeps its intent: ten one-line `return` routes and no `try`.
+- `_add_pages(api: FastAPI, ctx: Context) -> None` registers the four `GET` pages (`/`, `/approvals/{approval_id}`, `/escalations/{escalation_id}`, `/runs/{run_id}`), as nested one-line route functions, in today's order and with today's names.
+- `_add_forms(api: FastAPI, ctx: Context) -> None` registers the six `POST` forms (`resume`, `approve`, `reject`, `edit`, `retry`, `cancel`) the same way, in today's order.
+- `create_app` builds the context (your private `_context` helper may stay), creates `FastAPI`, calls `_add_pages(api, ctx)` and then `_add_forms(api, ctx)`, and returns the `HostGuard`. Routes register in today's order, which probe check 4 compares.
+- In `tests/unit/test_web_layout.py`, replace the whole function
+
+```python
+def test_create_app_only_registers_one_line_routes() -> None:
+    body = top_functions("app")["create_app"].body
+    kinds = (ast.FunctionDef, ast.AsyncFunctionDef)
+    routes = [node for node in body if isinstance(node, kinds)]
+    assert len(routes) == 10
+    assert [len(route.body) for route in routes] == [1] * 10
+    assert {type(route.body[0]).__name__ for route in routes} == {"Return"}
+    assert [
+        node for node in ast.walk(top_functions("app")["create_app"]) if isinstance(node, ast.Try)
+    ] == []
+```
+
+with exactly
+
+```python
+def test_create_app_only_registers_one_line_routes() -> None:
+    found = top_functions("app")
+    registrars = [found[name] for name in ("create_app", "_add_pages", "_add_forms")]
+    kinds = (ast.FunctionDef, ast.AsyncFunctionDef)
+    routes = [node for function in registrars for node in function.body if isinstance(node, kinds)]
+    assert [len(route.body) for route in routes] == [1] * 10
+    assert {type(route.body[0]).__name__ for route in routes} == {"Return"}
+    tries = [node for function in registrars for node in ast.walk(function)]
+    assert [node for node in tries if isinstance(node, ast.Try)] == []
+```
+
+The test count does not change, so N (`1619`), the given count, the collected count (`1626`) and the section counts stay as they are. `tests/unit/test_web_layout.py` joins the Scope and the protected-diff exclusions, and so does the architect's own `.claude/skills/phase-architect/SKILL.md`, edited with this correction.
+
+Checked on a copy of your uncommitted first pass, with the routes moved into the two helpers and the test edited: `_add_pages` has complexity 5, `_add_forms` 7, and `create_app` is under the limit. `ruff check .` passes. `tests/unit/test_web_layout.py`, the web tests and the given test give `172 passed`. The probe ends at `FAILURES 0`. On your first pass as it stands, the edited test fails with `KeyError: '_add_pages'`.
+
+Live again: every Acceptance row. Keep your first pass. Move the routes, make the test edit, and run Acceptance. Then rewrite your 9x progress entry with `scripts/progress.py` (it replaces the entry), removing the `Stopped:` item and the `create_app` deviation.
+
 ## Goal
 
 The last five functions over the complexity limits are brought under them, and none of them answers any differently. Then Ruff's complexity rules go on in `pyproject.toml` at explicit limits, so `scripts/check.py`'s lint step refuses any function over them from now on.
@@ -52,6 +95,7 @@ Phase 9w is built and verified, and everything is committed at e92eadd: N is `16
 | `tests/integration/test_run_status_cases.py` | `test_the_read_begins_before_both_selects_and_closes` refactored (Part 1) |
 | `pyproject.toml` | the rules and the limits (Part 2) |
 | `tests/unit/test_lint_rules.py` | the expected table in `test_the_rule_selection_is_exact` (Part 2) |
+| `tests/unit/test_web_layout.py` | `test_create_app_only_registers_one_line_routes` counts the routes in `create_app`, `_add_pages` and `_add_forms` (correction 1) |
 | `docs/progress.md` | one new entry |
 
 The given files are already committed; they are not in the Scope and never change.
@@ -63,7 +107,7 @@ The given files are already committed; they are not in the Scope and never chang
 - A new module, a new public name, or a changed signature, message or exception type.
 - A `noqa` or `pragma: no cover` added anywhere.
 - Fixing anything the probe shows as odd but unchanged. Behaviour stays as it is, even where it looks wrong.
-- New tests, or edits to tests other than the two Scope rows. The existing tests must pass unchanged.
+- New tests, or edits to tests other than the three Scope rows. The existing tests must pass unchanged.
 - Any change to `.claude/`, a given file, `AGENTS.md` or the design docs.
 
 ## Dependencies
@@ -76,7 +120,7 @@ None new.
 
 - `get_settings` builds `Settings`, turns a `ValidationError` or the environment's `SettingsError` into one `SettingsError`, then collects problems in this order: Ollama host, model, model timeout, decided-by, demo, MCP timeout, web port, then each MCP key in sorted order (its name, then its command line). One way under the limits is a private check per setting, or a table of (label, message, test) rows.
 - `compare_lines` emits the model line, the digest line, the template lines, the case-file lines, the moved lines for shared cases in the current report's order, then the added and the removed cases, or `["no change"]`. One way is a private helper per kind of line.
-- `create_app` builds the `Context`, then registers ten routes. Each nested route function adds to the function's complexity. One way is a private helper that registers the four pages and one that registers the six forms, each given `api` and `ctx`.
+- `create_app` builds the `Context`, then registers ten routes. Each nested route function adds to the function's complexity. The routes move into `_add_pages` and `_add_forms` (correction 1).
 - `main` in `scripts/check.py` parses the arguments, runs one section, checks `--first` names, runs the steps until one fails, then prints the summary. One way is a private helper for the `--first` check, one for the step loop, and one for the summary.
 - The test wraps `sqlite3.connect` to record each SQL statement and each close. Its two wrapper classes are what push it over.
 
@@ -157,7 +201,7 @@ None. This phase changes no behaviour. R2 to R9 are checked by the probe, the ex
 
 - A refactor changes no answer. If an existing test or a probe comparison fails, the refactor is wrong. Find the input from the lines the probe prints, and keep today's order of checks.
 - When a probe check prints `FAIL`, the lines above it give up to three cases with the old and the new answer.
-- Only the two test edits in the Scope. The refactored test's assertions stay word for word.
+- Only the three test edits in the Scope. The refactored test's assertions stay word for word.
 - Synthetic data only. Commands start with `.venv/bin/python`. Do not commit.
 
 ## Acceptance
@@ -171,7 +215,7 @@ None. This phase changes no behaviour. R2 to R9 are checked by the probe, the ex
 | `.venv/bin/python -m pytest tests/unit/test_complexity_rules.py --no-cov -q` | `7 passed` |
 | `.venv/bin/python docs/verification/probe-09x.py` | every check line starts `ok`; last line `FAILURES 0` |
 | `git diff $(git log -1 --format=%h -- docs/phases/phase-09x-complexity-rules.md) --stat -- tests/unit/test_complexity_rules.py docs/verification/probe-09x.py` | no output |
-| `git diff e92eadd --stat -- src scripts tests pyproject.toml .claude ':!src/conductor/config.py' ':!src/conductor/evals/report.py' ':!src/conductor/web/app.py' ':!scripts/check.py' ':!tests/integration/test_run_status_cases.py' ':!tests/unit/test_lint_rules.py' ':!pyproject.toml' ':!tests/unit/test_complexity_rules.py' ':!.claude/skills/phase-architect/history.md' ':!.claude/skills/phase-architect/phase_tools.py'` | no output |
+| `git diff e92eadd --stat -- src scripts tests pyproject.toml .claude ':!src/conductor/config.py' ':!src/conductor/evals/report.py' ':!src/conductor/web/app.py' ':!scripts/check.py' ':!tests/integration/test_run_status_cases.py' ':!tests/unit/test_lint_rules.py' ':!tests/unit/test_web_layout.py' ':!pyproject.toml' ':!tests/unit/test_complexity_rules.py' ':!.claude/skills/phase-architect/history.md' ':!.claude/skills/phase-architect/phase_tools.py' ':!.claude/skills/phase-architect/SKILL.md'` | no output |
 | `git status --short --untracked-files=all` | only the Scope paths (nothing, if the build is committed) |
 | `grep -c '^## Phase 9x: ' docs/progress.md` | `1` |
 | `.venv/bin/python scripts/check_reports.py --phase 9x` (after writing progress) | `Reports OK.` |

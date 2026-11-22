@@ -358,8 +358,8 @@ async def post_escalation(
     return record_and_resume(ctx, request, f"/escalations/{escalation_id}", record)
 
 
-def create_app(settings: Settings, *, resumer: Resumer | None = None) -> ASGIApp:
-    ctx = Context(
+def _context(settings: Settings, resumer: Resumer | None) -> Context:
+    return Context(
         settings=settings,
         templates=Jinja2Templates(
             env=Environment(
@@ -369,6 +369,10 @@ def create_app(settings: Settings, *, resumer: Resumer | None = None) -> ASGIApp
         ),
         resumer=Resumer(settings) if resumer is None else resumer,
     )
+
+
+def create_app(settings: Settings, *, resumer: Resumer | None = None) -> ASGIApp:
+    ctx = _context(settings, resumer)
     api = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 
     @api.get("/")

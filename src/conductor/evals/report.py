@@ -114,7 +114,7 @@ def latest_report(folder: Path) -> tuple[str, Report] | None:
         raise ReportError(name) from None
 
 
-def compare_lines(previous: Report, current: Report) -> list[str]:
+def _setup_lines(previous: Report, current: Report) -> list[str]:
     lines: list[str] = []
     if previous.model != current.model:
         lines.append("changed: model")
@@ -126,6 +126,11 @@ def compare_lines(previous: Report, current: Report) -> list[str]:
     for name in sorted(set(previous.case_files) | set(current.case_files)):
         if previous.case_files.get(name) != current.case_files.get(name):
             lines.append(f"changed: case file {name}")
+    return lines
+
+
+def _case_lines(previous: Report, current: Report) -> list[str]:
+    lines: list[str] = []
     earlier = {case.id: case for case in previous.cases}
     for case in current.cases:
         old = earlier.get(case.id)
@@ -141,6 +146,11 @@ def compare_lines(previous: Report, current: Report) -> list[str]:
     for case in previous.cases:
         if case.id not in current_ids:
             lines.append(f"removed: case {case.id}")
+    return lines
+
+
+def compare_lines(previous: Report, current: Report) -> list[str]:
+    lines = _setup_lines(previous, current) + _case_lines(previous, current)
     return lines or ["no change"]
 
 

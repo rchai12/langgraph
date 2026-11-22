@@ -239,11 +239,7 @@ def _run_one_section(
     return 0 if code == 0 else 1
 
 
-def main(
-    argv: list[str] | None = None,
-    run: Callable[[list[str], Path, Path | None], int] = run_command,
-) -> int:
-    names = _section_names()
+def _parser(names: list[str]) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run every check a phase must pass.")
     exclusive = parser.add_mutually_exclusive_group()
     exclusive.add_argument(
@@ -266,49 +262,80 @@ def main(
         type=Path,
         help="Log folder for --quiet (default: conductor-check in the temporary directory).",
     )
-    options = parser.parse_args(argv)
-    log_dir = _quiet_dir(options.log_dir) if options.quiet else None
-    if options.section is not None:
-        return _run_one_section(options.section, run, log_dir)
-    first: list[str] | None = None
-    if options.first is not None:
-        first = options.first.split(",")
-        known = set(names)
-        for name in first:
-            if name not in known:
-                parser.error(f"unknown section: {name}")
-    results: dict[str, str] = {}
-    with tempfile.TemporaryDirectory() as folder:
-        coverage_json = Path(folder) / "coverage.json"
-        planned = steps(sys.executable, coverage_json, first=first)
-        failed = None
-        for step in planned:
-            if log_dir is None:
-                print(f"== {step.name}", flush=True)
-            log: Path | None = None
-            if step.command is None:
-                passed = _critical_coverage(coverage_json)
-            else:
-                if log_dir is not None:
-                    log = log_dir / _log_name(step.name)
-                passed = run(step.command, ROOT, log) == 0
-                for part in step.command:
-                    if part.startswith("--junitxml="):
-                        wanted = first if step.name.startswith("tests (") else None
-                        _print_table(Path(part.removeprefix("--junitxml=")), wanted)
-                        break
-            results[step.name] = "passed" if passed else "FAILED"
-            if not passed and log is not None:
-                _show_tail(log)
-            if not passed:
-                failed = step.name
+    return parser
+
+
+def _first_sections(
+    parser: argparse.ArgumentParser, names: list[str], text: str | None
+) -> list[str] | None:
+    if text is None:
+        return None
+    first = text.split(",")
+    known = set(names)
+    for name in first:
+        if name not in known:
+            parser.error(f"unknown section: {name}")
+    return first
+
+
+def _run_step(
+    step: Step,
+    run: Callable[[list[str], Path, Path | None], int],
+    log_dir: Path | None,
+    coverage_json: Path,
+    first: list[str] | None,
+) -> bool:
+    if log_dir is None:
+        print(f"== {step.name}", flush=True)
+    log: Path | None = None
+    if step.command is None:
+        passed = _critical_coverage(coverage_json)
+    else:
+        if log_dir is not None:
+            log = log_dir / _log_name(step.name)
+        passed = run(step.command, ROOT, log) == 0
+        for part in step.command:
+            if part.startswith("--junitxml="):
+                wanted = first if step.name.startswith("tests (") else None
+                _print_table(Path(part.removeprefix("--junitxml=")), wanted)
                 break
+    if not passed and log is not None:
+        _show_tail(log)
+    return passed
+
+
+def _summary(planned: list[Step], results: dict[str, str], log_dir: Path | None) -> None:
     print()
     print("Summary:")
     for step in planned:
         print(f"  {step.name}: {results.get(step.name, 'not run')}")
     if log_dir is not None:
         print(f"Logs: {log_dir}")
+
+
+def main(
+    argv: list[str] | None = None,
+    run: Callable[[list[str], Path, Path | None], int] = run_command,
+) -> int:
+    names = _section_names()
+    parser = _parser(names)
+    options = parser.parse_args(argv)
+    log_dir = _quiet_dir(options.log_dir) if options.quiet else None
+    if options.section is not None:
+        return _run_one_section(options.section, run, log_dir)
+    first = _first_sections(parser, names, options.first)
+    results: dict[str, str] = {}
+    failed = None
+    with tempfile.TemporaryDirectory() as folder:
+        coverage_json = Path(folder) / "coverage.json"
+        planned = steps(sys.executable, coverage_json, first=first)
+        for step in planned:
+            passed = _run_step(step, run, log_dir, coverage_json, first)
+            results[step.name] = "passed" if passed else "FAILED"
+            if not passed:
+                failed = step.name
+                break
+    _summary(planned, results, log_dir)
     print("All checks passed." if failed is None else f"Check failed at: {failed}")
     return 0 if failed is None else 1
 

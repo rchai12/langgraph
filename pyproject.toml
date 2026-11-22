@@ -39,7 +39,15 @@ target-version = "py312"
 extend-exclude = ["docs"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "B", "UP", "ARG"]
+select = ["E", "F", "I", "B", "UP", "ARG", "C901", "PLR0911", "PLR0912", "PLR0915"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.lint.pylint]
+max-returns = 6
+max-branches = 12
+max-statements = 50
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

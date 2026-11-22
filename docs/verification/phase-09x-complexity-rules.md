@@ -9,6 +9,8 @@ Spec: `docs/phases/phase-09x-complexity-rules.md`. Follow `docs/phase-convention
 - `git ls-files --error-unmatch docs/phases/phase-09x-complexity-rules.md docs/verification/phase-09x-complexity-rules.md tests/unit/test_complexity_rules.py docs/verification/probe-09x.py` must succeed. The gates judge against a committed baseline.
 - The build may be uncommitted or already committed. The diff under review is `git diff $(git log -1 --format=%h -- docs/phases/phase-09x-complexity-rules.md)` plus untracked files. G5 and G6 use the spec's commit and e92eadd, so they hold either way.
 
+The spec has a correction 1 (2026-11-22): the routes moved into the private `_add_pages` and `_add_forms`, and `tests/unit/test_web_layout.py::test_create_app_only_registers_one_line_routes` got the exact edit it gives. Read it before judging `web/app.py`.
+
 The coder refactored five functions in five files, so that none is over the complexity limits and none answers differently, then turned the rules on in `pyproject.toml`.
 
 ## 1. Gates
@@ -22,7 +24,7 @@ N is `1619`. Given count: 7. `.venv/bin/python scripts/accept.py --phase 9x --gu
 | G3 | `.venv/bin/python -m pytest tests/unit/test_complexity_rules.py --no-cov -q` | `7 passed` |
 | G4 | `.venv/bin/python docs/verification/probe-09x.py` | every check line starts `ok`; last line `FAILURES 0` |
 | G5 | `git diff $(git log -1 --format=%h -- docs/phases/phase-09x-complexity-rules.md) --stat -- tests/unit/test_complexity_rules.py docs/verification/probe-09x.py` | no output |
-| G6 | `git diff e92eadd --stat -- src scripts tests pyproject.toml .claude ':!src/conductor/config.py' ':!src/conductor/evals/report.py' ':!src/conductor/web/app.py' ':!scripts/check.py' ':!tests/integration/test_run_status_cases.py' ':!tests/unit/test_lint_rules.py' ':!pyproject.toml' ':!tests/unit/test_complexity_rules.py' ':!.claude/skills/phase-architect/history.md' ':!.claude/skills/phase-architect/phase_tools.py'` | no output |
+| G6 | `git diff e92eadd --stat -- src scripts tests pyproject.toml .claude ':!src/conductor/config.py' ':!src/conductor/evals/report.py' ':!src/conductor/web/app.py' ':!scripts/check.py' ':!tests/integration/test_run_status_cases.py' ':!tests/unit/test_lint_rules.py' ':!tests/unit/test_web_layout.py' ':!pyproject.toml' ':!tests/unit/test_complexity_rules.py' ':!.claude/skills/phase-architect/history.md' ':!.claude/skills/phase-architect/phase_tools.py' ':!.claude/skills/phase-architect/SKILL.md'` | no output |
 | G7 | `git status --short --untracked-files=all` | only the Scope paths (nothing, if the build is committed) |
 | G8 | `grep -c '^## Phase 9x: ' docs/progress.md` | `1` |
 | G9 | `.venv/bin/python scripts/check_reports.py --phase 9x` | `Reports OK.` |
@@ -37,7 +39,7 @@ G1 includes Ruff's lint step, now with the complexity rules, and the critical-mo
 | R2 | probe check 1 | `ok` |
 | R3 | probe check 2 | `ok` |
 | R4 | probe check 3 | `ok` |
-| R5 | probe check 4 | `ok` |
+| R5 | probe check 4; `tests/unit/test_web_layout.py::test_create_app_only_registers_one_line_routes` within G1; `git diff e92eadd -- tests/unit/test_web_layout.py` | `ok`; pass; exactly correction 1's replacement |
 | R6 | probe check 5 | `ok` |
 | R7 | `test_pyproject_turns_the_rules_on_at_the_limits`; `git diff e92eadd -- pyproject.toml tests/unit/test_lint_rules.py` | pass; exactly the two texts under the spec's "Design" |
 | R8 | G1, G2 | as given |
@@ -123,8 +125,9 @@ These are correct even though the spec does not spell them out:
 
 Each must be absent:
 - A refactor of the architect's tools or of the 9w files.
+- Route helpers other than `_add_pages` and `_add_forms`, or routes registered out of today's order.
 - Any rule beyond the four, or a different limit.
-- Any change to `.claude/` or a given file, or a test edit outside the two Scope rows.
+- Any change to `.claude/` or a given file, or a test edit outside the three Scope rows.
 - A new module, a new public name, or a changed signature, message or exception type.
 - A behaviour change, even one that looks like a fix.
 - A new `noqa` or `pragma: no cover`.

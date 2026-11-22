@@ -95,7 +95,11 @@ def test_the_rule_selection_is_exact() -> None:
         "line-length": 100,
         "target-version": "py312",
         "extend-exclude": ["docs"],
-        "lint": {"select": ["E", "F", "I", "B", "UP", "ARG"]},
+        "lint": {
+            "select": ["E", "F", "I", "B", "UP", "ARG", "C901", "PLR0911", "PLR0912", "PLR0915"],
+            "mccabe": {"max-complexity": 10},
+            "pylint": {"max-returns": 6, "max-branches": 12, "max-statements": 50},
+        },
     }
 
 

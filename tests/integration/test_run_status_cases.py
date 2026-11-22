@@ -249,6 +249,43 @@ def test_a_corrupt_blob_and_failed_reads_are_unavailable() -> None:
         runtime.read_state(settings, waiting.run_id)
 
 
+class _Cursor:
+    def __init__(self, inner: sqlite3.Cursor, calls: list[str]) -> None:
+        self.inner = inner
+        self.calls = calls
+
+    def execute(self, sql: str, parameters: object = ()) -> object:
+        self.calls.append(sql)
+        return self.inner.execute(sql, parameters)
+
+    def __iter__(self) -> object:
+        return iter(self.inner)
+
+    def __getattr__(self, name: str) -> object:
+        return getattr(self.inner, name)
+
+
+class _Connection:
+    def __init__(self, inner: sqlite3.Connection, calls: list[str], closed: list[int]) -> None:
+        self.inner = inner
+        self.calls = calls
+        self.closed = closed
+
+    def execute(self, sql: str, parameters: object = ()) -> object:
+        self.calls.append(sql)
+        return self.inner.execute(sql, parameters)
+
+    def cursor(self) -> _Cursor:
+        return _Cursor(self.inner.cursor(), self.calls)
+
+    def close(self) -> None:
+        self.closed.append(1)
+        self.inner.close()
+
+    def __getattr__(self, name: str) -> object:
+        return getattr(self.inner, name)
+
+
 def test_the_read_begins_before_both_selects_and_closes(monkeypatch: pytest.MonkeyPatch) -> None:
     settings = get_settings()
     model = scripted(("plan", ECHO), ("answer", REPLY))
@@ -259,40 +296,8 @@ def test_the_read_begins_before_both_selects_and_closes(monkeypatch: pytest.Monk
     closed: list[int] = []
     real_connect = sqlite3.connect
 
-    class Cursor:
-        def __init__(self, inner: sqlite3.Cursor) -> None:
-            self.inner = inner
-
-        def execute(self, sql: str, parameters: object = ()) -> object:
-            calls.append(sql)
-            return self.inner.execute(sql, parameters)
-
-        def __iter__(self) -> object:
-            return iter(self.inner)
-
-        def __getattr__(self, name: str) -> object:
-            return getattr(self.inner, name)
-
-    class Connection:
-        def __init__(self, inner: sqlite3.Connection) -> None:
-            self.inner = inner
-
-        def execute(self, sql: str, parameters: object = ()) -> object:
-            calls.append(sql)
-            return self.inner.execute(sql, parameters)
-
-        def cursor(self) -> Cursor:
-            return Cursor(self.inner.cursor())
-
-        def close(self) -> None:
-            closed.append(1)
-            self.inner.close()
-
-        def __getattr__(self, name: str) -> object:
-            return getattr(self.inner, name)
-
-    def connect(*args: object, **kwargs: object) -> Connection:
-        return Connection(real_connect(*args, **kwargs))
+    def connect(*args: object, **kwargs: object) -> _Connection:
+        return _Connection(real_connect(*args, **kwargs), calls, closed)
 
     monkeypatch.setattr(sqlite3, "connect", connect)
     assert runtime.read_state(settings, done.run_id) == done
