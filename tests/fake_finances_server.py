@@ -69,7 +69,7 @@ def proposal(kind: str, reason: str, **fields: Any) -> dict[str, Any]:
 
 
 @server.tool(annotations=READ)
-def list_accounts(include_inactive: bool = False) -> dict[str, Any]:
+def list_accounts(include_inactive: bool = False) -> dict[str, Any]:  # noqa: ARG001
     """The accounts."""
     return {
         "accounts": [
@@ -109,7 +109,7 @@ def get_balances() -> dict[str, Any]:
 
 
 @server.tool(annotations=READ)
-def get_net_worth(months: Annotated[int, Field(ge=1, le=60)] = 12) -> dict[str, Any]:
+def get_net_worth(months: Annotated[int, Field(ge=1, le=60)] = 12) -> dict[str, Any]:  # noqa: ARG001
     """Net worth at each month's end."""
     return {
         "as_of": "2026-11-10",
@@ -119,19 +119,19 @@ def get_net_worth(months: Annotated[int, Field(ge=1, le=60)] = 12) -> dict[str, 
 
 @server.tool(annotations=READ)
 def list_transactions(
-    text: str = "",
-    account: str = "",
-    person: str = "",
-    category: str = "",
-    group: str = "",
-    merchant: str = "",
-    bank: str = "",
-    card: str = "",
-    kind: str = "",
-    start: date | None = None,
-    end: date | None = None,
-    limit: Annotated[int, Field(ge=1, le=200)] = 50,
-    offset: Annotated[int, Field(ge=0, le=5000)] = 0,
+    text: str = "",  # noqa: ARG001
+    account: str = "",  # noqa: ARG001
+    person: str = "",  # noqa: ARG001
+    category: str = "",  # noqa: ARG001
+    group: str = "",  # noqa: ARG001
+    merchant: str = "",  # noqa: ARG001
+    bank: str = "",  # noqa: ARG001
+    card: str = "",  # noqa: ARG001
+    kind: str = "",  # noqa: ARG001
+    start: date | None = None,  # noqa: ARG001
+    end: date | None = None,  # noqa: ARG001
+    limit: Annotated[int, Field(ge=1, le=200)] = 50,  # noqa: ARG001
+    offset: Annotated[int, Field(ge=0, le=5000)] = 0,  # noqa: ARG001
 ) -> dict[str, Any]:
     """Transactions, latest first."""
     return {"transactions": [GROCER], "next_offset": None}
@@ -171,7 +171,8 @@ def get_spending(
 
 @server.tool(annotations=READ)
 def month_over_month(
-    month: str = "", count: Annotated[int, Field(ge=1, le=24)] = 6
+    month: str = "",  # noqa: ARG001
+    count: Annotated[int, Field(ge=1, le=24)] = 6,  # noqa: ARG001
 ) -> dict[str, Any]:
     """Net spending and income by month."""
     return {
@@ -180,19 +181,19 @@ def month_over_month(
 
 
 @server.tool(annotations=READ)
-def get_insights(month: str = "") -> dict[str, Any]:
+def get_insights(month: str = "") -> dict[str, Any]:  # noqa: ARG001
     """Findings for a month."""
     return {"month": "2026-11", "findings": [], "merchants": [], "set_aside": []}
 
 
 @server.tool(annotations=READ)
-def get_recurring(income: bool = False, include_inactive: bool = False) -> dict[str, Any]:
+def get_recurring(income: bool = False, include_inactive: bool = False) -> dict[str, Any]:  # noqa: ARG001
     """Recurring charges or income."""
     return {"as_of": "2026-11-10", "income": income, "series": []}
 
 
 @server.tool(annotations=READ)
-def get_upcoming(days: Annotated[int, Field(ge=1, le=90)] = 30) -> dict[str, Any]:
+def get_upcoming(days: Annotated[int, Field(ge=1, le=90)] = 30) -> dict[str, Any]:  # noqa: ARG001
     """Bills and income expected."""
     return {
         "start": "2026-11-10",
@@ -213,20 +214,21 @@ def get_upcoming(days: Annotated[int, Field(ge=1, le=90)] = 30) -> dict[str, Any
 
 @server.tool(annotations=READ)
 def get_forecast(
-    days: Annotated[int, Field(ge=1, le=90)] = 30, account: str = ""
+    days: Annotated[int, Field(ge=1, le=90)] = 30,  # noqa: ARG001
+    account: str = "",  # noqa: ARG001
 ) -> dict[str, Any]:
     """Balances walked forward."""
     return {"start": "2026-11-10", "end": "2026-12-09", "accounts": [], "no_balance": []}
 
 
 @server.tool(annotations=READ)
-def get_budgets(month: str = "") -> dict[str, Any]:
+def get_budgets(month: str = "") -> dict[str, Any]:  # noqa: ARG001
     """Budgets for a month."""
     return {"month": "2026-11", "budgets": []}
 
 
 @server.tool(annotations=READ)
-def list_uncategorized(limit: Annotated[int, Field(ge=1, le=500)] = 50) -> dict[str, Any]:
+def list_uncategorized(limit: Annotated[int, Field(ge=1, le=500)] = 50) -> dict[str, Any]:  # noqa: ARG001
     """Transactions without a category."""
     return {"total": 1, "transactions": [{**BRIEF, "merchant": "Transfer To Savings"}]}
 
@@ -264,7 +266,7 @@ def list_rules() -> dict[str, Any]:
 
 
 @server.tool(annotations=READ)
-def list_transfers(limit: Annotated[int, Field(ge=1, le=500)] = 100) -> dict[str, Any]:
+def list_transfers(limit: Annotated[int, Field(ge=1, le=500)] = 100) -> dict[str, Any]:  # noqa: ARG001
     """Transfers already paired."""
     return {"total": 0, "pairs": []}
 
@@ -282,7 +284,7 @@ def data_coverage() -> dict[str, Any]:
 
 
 @server.tool(annotations=READ)
-def find_merchants(phrase: str, limit: Annotated[int, Field(ge=1, le=20)] = 5) -> dict[str, Any]:
+def find_merchants(phrase: str, limit: Annotated[int, Field(ge=1, le=20)] = 5) -> dict[str, Any]:  # noqa: ARG001
     """Names like a phrase."""
     return {"matches": [{"name": "Corner Grocer", "kind": "merchant", "score": 90}]}
 
@@ -357,9 +359,9 @@ def propose_rule_change(
     rule_id: int,
     reason: str,
     delete: bool = False,
-    pattern: str | None = None,
-    match: Match | None = None,
-    priority: Annotated[int | None, Field(ge=-1000, le=1000)] = None,
+    pattern: str | None = None,  # noqa: ARG001
+    match: Match | None = None,  # noqa: ARG001
+    priority: Annotated[int | None, Field(ge=-1000, le=1000)] = None,  # noqa: ARG001
     category: str | None = None,
 ) -> dict[str, Any]:
     """Propose a rule change."""
@@ -393,8 +395,8 @@ def propose_finding_status(
 
 @server.tool(annotations=READ)
 def list_proposals(
-    status: Literal["open", "accepted", "declined"] = "open",
-    limit: Annotated[int, Field(ge=1, le=200)] = 50,
+    status: Literal["open", "accepted", "declined"] = "open",  # noqa: ARG001
+    limit: Annotated[int, Field(ge=1, le=200)] = 50,  # noqa: ARG001
 ) -> dict[str, Any]:
     """Proposals of one status."""
     return {"proposals": []}
@@ -414,7 +416,7 @@ def log_advice(text: str, subject: str = "") -> dict[str, Any]:
 
 
 @server.tool(annotations=READ)
-def list_advice(limit: Annotated[int, Field(ge=1, le=200)] = 20) -> dict[str, Any]:
+def list_advice(limit: Annotated[int, Field(ge=1, le=200)] = 20) -> dict[str, Any]:  # noqa: ARG001
     """Kept notes."""
     return {"advice": []}
 

@@ -34,7 +34,8 @@ def db(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Store:
     return store
 
 
-def test_the_open_escalations(db: Store) -> None:
+@pytest.mark.usefixtures("db")
+def test_the_open_escalations() -> None:
     assert run("escalations", "list").stdout == (
         f"{FIRST}  2026-11-08T09:00:00Z  invalid_model_output  run {RUN}\n"
         f"{SECOND}  2026-11-08T09:05:00Z  model_unavailable  run {RUN}\n"
@@ -49,12 +50,13 @@ def test_the_open_escalations(db: Store) -> None:
     }
 
 
-def test_nothing_open(tmp_path: Path) -> None:
+def test_nothing_open() -> None:
     result = run("escalations", "list")
     assert (result.exit_code, result.stdout) == (0, "No open escalations.\n")
 
 
-def test_show_an_escalation(db: Store) -> None:
+@pytest.mark.usefixtures("db")
+def test_show_an_escalation() -> None:
     assert run("escalations", "show", FIRST).stdout == (
         f"escalation {FIRST}  invalid_model_output  open\n"
         f"run {RUN}  raised 2026-11-08T09:00:00Z\n"
@@ -79,7 +81,8 @@ def test_retry_asks_first(db: Store) -> None:
     assert [e.escalation_id for e in db.open_escalations()] == [FIRST]
 
 
-def test_cancel_does_not_ask(db: Store) -> None:
+@pytest.mark.usefixtures("db")
+def test_cancel_does_not_ask() -> None:
     result = run("escalations", "cancel", "--no-resume", FIRST)
     assert (result.exit_code, result.stdout) == (0, f"Cancelled {FIRST}.\n")
     again = run("escalations", "retry", "--no-resume", FIRST, "--yes")

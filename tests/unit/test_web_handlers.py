@@ -25,10 +25,10 @@ class Recorder:
     def start(self, run_id: str) -> None:
         self.started.append(run_id)
 
-    def running(self, run_id: str) -> bool:
+    def running(self, _run_id: str) -> bool:
         return False
 
-    def error(self, run_id: str) -> str | None:
+    def error(self, _run_id: str) -> str | None:
         return None
 
 
@@ -76,7 +76,7 @@ def test_a_second_approve_is_a_conflict_and_starts_nothing(tmp_path: Path) -> No
 def test_a_bad_edit_is_refused_before_the_store_is_opened(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    def refuse(path: object) -> None:
+    def refuse(_path: object) -> None:
         raise AssertionError("the store was opened")
 
     monkeypatch.setattr(web_app, "Store", refuse)
@@ -92,7 +92,7 @@ def test_a_bad_edit_is_refused_before_the_store_is_opened(
 def test_an_unavailable_run_state_is_a_503_on_the_page_and_the_post(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    def unavailable(settings: object, run_id: str) -> None:
+    def unavailable(_settings: object, _run_id: str) -> None:
         raise RunStateUnavailable("no state")
 
     monkeypatch.setattr(web_app.runtime, "read_state", unavailable)

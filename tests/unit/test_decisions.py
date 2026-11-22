@@ -171,7 +171,7 @@ def test_a_note_of_500_is_kept_and_a_longer_one_is_refused_first(db_moved: Store
 def test_a_store_that_lost_the_race_passes_already_decided(
     db_moved: Store, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    def lost(decision: object) -> None:
+    def lost(_decision: object) -> None:
         raise AlreadyDecided(f"approval {ID} is already decided")
 
     monkeypatch.setattr(db_moved, "record_decision", lost)

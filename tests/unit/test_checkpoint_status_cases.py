@@ -212,7 +212,7 @@ def test_a_long_reply_at_the_bound_is_kept_and_references_are_cleared() -> None:
 
 
 class _Broken:
-    def get_tuple(self, config: dict) -> CheckpointTuple:
+    def get_tuple(self, _config: dict) -> CheckpointTuple:
         raise RuntimeError("SYNTHETIC-SECRET")
 
 

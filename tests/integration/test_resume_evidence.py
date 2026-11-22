@@ -27,7 +27,7 @@ class Raising(ScriptedModel):
         self.error = error
         self.before = before
 
-    def chat(self, request):
+    def chat(self, _request):
         if self.before is not None:
             self.before()
         raise self.error
@@ -116,7 +116,7 @@ def test_a_resume_that_then_succeeds_leaves_the_record_behind_it() -> None:
 def test_a_refused_resume_records_nothing(monkeypatch: pytest.MonkeyPatch) -> None:
     calls: list[str] = []
 
-    def broken(self, action, args):
+    def broken(_self, action, _args):
         calls.append(action.name)
         raise RuntimeError(SECRET)
 

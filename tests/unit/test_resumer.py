@@ -11,7 +11,7 @@ RUN = "a" * 32
 
 
 @contextmanager
-def _open(settings: object, *, model: object = None) -> object:
+def _open(_settings: object, *, _model: object = None) -> object:
     yield None
 
 
@@ -20,7 +20,7 @@ def test_a_second_start_waits_and_the_thread_is_a_daemon(monkeypatch) -> None:
     release = threading.Event()
     calls: list[tuple[str, bool]] = []
 
-    def resume(opened: object, run_id: str) -> None:
+    def resume(_opened: object, run_id: str) -> None:
         calls.append((run_id, threading.current_thread().daemon))
         started.set()
         release.wait(5)
@@ -46,7 +46,7 @@ def test_a_second_start_waits_and_the_thread_is_a_daemon(monkeypatch) -> None:
 def test_other_exceptions_are_kept_as_a_fixed_line_and_a_tool_check_is_its_text(
     monkeypatch,
 ) -> None:
-    def boom(opened: object, run_id: str) -> None:
+    def boom(_opened: object, _run_id: str) -> None:
         raise RuntimeError("SYNTHETIC-SECRET")
 
     monkeypatch.setattr(runtime, "open_runtime", _open)
@@ -60,7 +60,7 @@ def test_other_exceptions_are_kept_as_a_fixed_line_and_a_tool_check_is_its_text(
     started = threading.Event()
     release = threading.Event()
 
-    def checked(opened: object, run_id: str) -> None:
+    def checked(_opened: object, _run_id: str) -> None:
         started.set()
         release.wait(5)
         raise ToolCheckFailed(())
@@ -77,7 +77,7 @@ def test_other_exceptions_are_kept_as_a_fixed_line_and_a_tool_check_is_its_text(
 
 
 def test_a_run_error_is_kept_and_the_next_start_clears_it(monkeypatch) -> None:
-    def missing(opened: object, run_id: str) -> None:
+    def missing(_opened: object, run_id: str) -> None:
         raise RunError(f"no run {run_id}")
 
     monkeypatch.setattr(runtime, "open_runtime", _open)
@@ -90,7 +90,7 @@ def test_a_run_error_is_kept_and_the_next_start_clears_it(monkeypatch) -> None:
     started = threading.Event()
     release = threading.Event()
 
-    def wait(opened: object, run_id: str) -> None:
+    def wait(_opened: object, _run_id: str) -> None:
         started.set()
         release.wait(5)
 

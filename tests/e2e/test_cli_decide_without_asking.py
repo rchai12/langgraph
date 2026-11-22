@@ -31,7 +31,7 @@ def replies(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, str]]:
     real = runtime.open_runtime
 
     @contextmanager
-    def scripted(settings, *, model=None):
+    def scripted(settings, *, _model=None):
         answers = [ScriptedReply(point, ModelReply(content=text)) for point, text in queue]
         queue.clear()
         with real(settings, model=ScriptedModel(answers)) as opened:

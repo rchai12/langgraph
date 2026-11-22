@@ -29,7 +29,7 @@ def test_a_failed_write_releases_the_file_and_keeps_the_seq(
     assert add(log) == 1
     real = os.write
 
-    def failing(descriptor: int, data: bytes) -> int:
+    def failing(_descriptor: int, _data: bytes) -> int:
         raise OSError("disk full")
 
     monkeypatch.setattr(os, "write", failing)

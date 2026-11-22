@@ -142,7 +142,7 @@ def test_a_recorded_decision_starts_its_run_and_redirects() -> None:
 def test_a_missing_item_is_not_found_and_starts_nothing() -> None:
     resumer = FakeResumer()
 
-    def record(store: object) -> str:
+    def record(_store: object) -> str:
         raise NotFound("no approval")
 
     found = app.record_and_resume(context(resumer), request(), "/approvals/x", record)
@@ -152,7 +152,7 @@ def test_a_missing_item_is_not_found_and_starts_nothing() -> None:
 def test_a_store_failure_is_unavailable_and_starts_nothing() -> None:
     resumer = FakeResumer()
 
-    def record(store: object) -> str:
+    def record(_store: object) -> str:
         raise StoreError("database is locked")
 
     found = app.record_and_resume(context(resumer), request(), "/approvals/x", record)

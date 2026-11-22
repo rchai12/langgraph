@@ -49,7 +49,7 @@ def cases(tmp_path: Path) -> Path:
 @pytest.fixture
 def model(monkeypatch: pytest.MonkeyPatch) -> list[ScriptedReply]:
     replies: list[ScriptedReply] = []
-    monkeypatch.setattr(evals_run, "model_for", lambda settings: ScriptedModel(replies))
+    monkeypatch.setattr(evals_run, "model_for", lambda _settings: ScriptedModel(replies))
     monkeypatch.setenv("CONDUCTOR_DEMO", "true")
     return replies
 

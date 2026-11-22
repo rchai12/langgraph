@@ -1,5 +1,4 @@
 import json
-from pathlib import Path
 
 import pytest
 
@@ -20,7 +19,7 @@ def python_3_12_13(monkeypatch: pytest.MonkeyPatch) -> None:
     ],
 )
 def test_a_model_listed_without_a_valid_digest(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, entry: dict[str, str]
+    monkeypatch: pytest.MonkeyPatch, entry: dict[str, str]
 ) -> None:
     with fake_ollama() as (fake, host):
         fake.body = json.dumps({"models": [entry]}).encode()

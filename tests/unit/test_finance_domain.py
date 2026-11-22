@@ -56,7 +56,7 @@ def test_every_action_fits_the_real_read_tools() -> None:
             return tools
 
     problems = check_registry(
-        Registry((finance.DOMAIN,)), get_settings(), connect=lambda server, settings: Listing()
+        Registry((finance.DOMAIN,)), get_settings(), connect=lambda _server, _settings: Listing()
     )
     assert problems == ()
 

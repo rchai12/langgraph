@@ -25,7 +25,7 @@ def _escalation_json(stored: StoredEscalation) -> dict[str, object]:
 
 @app.command("list")
 def list_escalations(json_output: Annotated[bool, typer.Option("--json")] = False) -> None:
-    def work(settings: Settings, store: Store) -> None:
+    def work(_settings: Settings, store: Store) -> None:
         opened = store.open_escalations()
         if json_output:
             common.dump([_escalation_json(stored) for stored in opened])
@@ -47,7 +47,7 @@ def list_escalations(json_output: Annotated[bool, typer.Option("--json")] = Fals
 def show_escalation(
     escalation_id: str, json_output: Annotated[bool, typer.Option("--json")] = False
 ) -> None:
-    def work(settings: Settings, store: Store) -> None:
+    def work(_settings: Settings, store: Store) -> None:
         stored = store.escalation(escalation_id)
         if json_output:
             common.dump(_escalation_json(stored))

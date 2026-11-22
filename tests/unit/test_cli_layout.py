@@ -102,7 +102,7 @@ def seen(monkeypatch: pytest.MonkeyPatch) -> list[str]:
     """What happened, in order: the confirmation asked, the decision recorded, the run resumed."""
     happened: list[str] = []
 
-    def resume(opened: object, run_id: str) -> RunState:
+    def resume(_opened: object, run_id: str) -> RunState:
         happened.append(f"resume {run_id}")
         return RunState(run_id=run_id, status="done", reply="All set.")
 

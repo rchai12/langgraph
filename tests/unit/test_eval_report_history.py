@@ -164,7 +164,7 @@ def test_a_removed_case_and_an_escalation_are_named_alone() -> None:
 def test_notes_are_not_a_previous_report(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("CONDUCTOR_DEMO", "true")
     replies: list[ScriptedReply] = [ScriptedReply("plan", ModelReply(content=PLAN, total_ns=10**9))]
-    monkeypatch.setattr("conductor.evals.run.model_for", lambda settings: ScriptedModel(replies))
+    monkeypatch.setattr("conductor.evals.run.model_for", lambda _settings: ScriptedModel(replies))
     cases = tmp_path / "only.toml"
     cases.write_text(
         '[[case]]\nid = "say-hi"\nrequest = "demo: say hi"\nroute = "demo"\nplan = ["echo"]\n',

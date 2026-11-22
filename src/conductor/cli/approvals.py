@@ -32,7 +32,7 @@ def _approval_json(stored: StoredApproval) -> dict[str, object]:
 
 @app.command("list")
 def list_approvals(json_output: Annotated[bool, typer.Option("--json")] = False) -> None:
-    def work(settings: Settings, store: Store) -> None:
+    def work(_settings: Settings, store: Store) -> None:
         pending = store.pending()
         if json_output:
             common.dump([request.model_dump(mode="json") for request in pending])
@@ -52,7 +52,7 @@ def list_approvals(json_output: Annotated[bool, typer.Option("--json")] = False)
 def show_approval(
     approval_id: str, json_output: Annotated[bool, typer.Option("--json")] = False
 ) -> None:
-    def work(settings: Settings, store: Store) -> None:
+    def work(_settings: Settings, store: Store) -> None:
         stored = store.approval(approval_id)
         if json_output:
             common.dump(_approval_json(stored))

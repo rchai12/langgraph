@@ -84,7 +84,7 @@ def check(domain: Domain, *tools: ToolInfo, unavailable: str | None = None):
     found = McpUnavailable("ledger", unavailable) if unavailable else tools
     clients: dict[str, FakeClient] = {}
 
-    def connect(server: McpServer, settings):
+    def connect(server: McpServer, _settings):
         return clients.setdefault(server.name, FakeClient(found))
 
     problems = check_registry(Registry((domain,)), get_settings(), connect=connect)
@@ -113,7 +113,7 @@ def test_a_domain_that_fits_its_server() -> None:
 
 
 def test_a_registry_without_servers_starts_nothing() -> None:
-    def connect(server, settings):
+    def connect(_server, _settings):
         raise AssertionError("a server was started")
 
     from conductor.domains import demo
@@ -288,7 +288,7 @@ def test_two_domains_are_listed_and_an_idle_server_has_no_problem() -> None:
     beta = Domain("beta", "Second.", (advise,), servers=(McpServer("two"),))
     started: list[str] = []
 
-    def connect(server: McpServer, settings: object) -> object:
+    def connect(server: McpServer, _settings: object) -> object:
         started.append(server.name)
         return _Client((echo,) if server.name == "one" else ())
 
@@ -349,7 +349,7 @@ def test_the_next_server_is_checked_after_one_cannot_be_reached() -> None:
         True,
     )
 
-    def connect(server: McpServer, settings: object) -> object:
+    def connect(server: McpServer, _settings: object) -> object:
         if server.name == "down":
             raise McpUnavailable("down", "timeout")
         return _Client((echo,))
@@ -392,7 +392,7 @@ def test_one_tool_and_one_action_use_the_singular(monkeypatch) -> None:
     monkeypatch.setattr(
         diagnostics,
         "check_servers",
-        lambda registry, settings: (ServerCheck("ledger", 1, 1, ()),),
+        lambda _registry, _settings: (ServerCheck("ledger", 1, 1, ()),),
     )
     monkeypatch.setattr(domains, "DOMAINS", ())
     lines = [check.line for check in diagnostics.run_checks(get_settings())]
@@ -408,7 +408,7 @@ class _Client:
 
 
 def _texts(domain: Domain, *tools: ToolInfo) -> list[str]:
-    def connect(server: McpServer, settings: object) -> _Client:
+    def connect(_server: McpServer, _settings: object) -> _Client:
         return _Client(tools)
 
     found = check_servers(Registry((domain,)), get_settings(), connect=connect)

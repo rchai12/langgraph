@@ -174,7 +174,7 @@ def test_too_many_runs_are_refused() -> None:
 def test_a_folder_runs_each_file_in_order(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("CONDUCTOR_DEMO", "true")
     replies: list[ScriptedReply] = []
-    monkeypatch.setattr(evals_run, "model_for", lambda settings: ScriptedModel(replies))
+    monkeypatch.setattr(evals_run, "model_for", lambda _settings: ScriptedModel(replies))
     folder = tmp_path / "cases"
     folder.mkdir()
     one = '[[case]]\nid = "alpha"\nrequest = "demo: say hi"\nroute = "demo"\nplan = ["echo"]\n'

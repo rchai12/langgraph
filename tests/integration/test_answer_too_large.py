@@ -21,7 +21,7 @@ ECHO_PLAN = '{"steps": [{"action": "echo", "args": {"text": "hi"}}]}'
 
 
 class BigRunner:
-    def run(self, action: Action, args: Contract) -> dict:
+    def run(self, _action: Action, _args: Contract) -> dict:
         return {"text": "y" * 30_000}
 
 

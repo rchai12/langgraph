@@ -45,7 +45,7 @@ class DemoRunner:
 
 
 class NoRunner:
-    def run(self, action: Action, args: Contract) -> dict[str, JsonValue]:
+    def run(self, _action: Action, _args: Contract) -> dict[str, JsonValue]:
         raise StepFailed()
 
 

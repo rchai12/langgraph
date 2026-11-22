@@ -17,15 +17,15 @@ class Quiet:
     def start(self, run_id: str) -> None:
         pass
 
-    def running(self, run_id: str) -> bool:
+    def running(self, _run_id: str) -> bool:
         return False
 
-    def error(self, run_id: str) -> str | None:
+    def error(self, _run_id: str) -> str | None:
         return None
 
 
 @pytest.fixture
-def page(tmp_path: Path) -> TestClient:
+def page() -> TestClient:
     return TestClient(create_app(get_settings(), resumer=Quiet()), base_url="http://127.0.0.1:8766")
 
 

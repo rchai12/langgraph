@@ -86,7 +86,8 @@ def _plan(db: Store) -> None:
     )
 
 
-def test_two_host_headers_are_refused_and_localhost_is_answered(db: Store) -> None:
+@pytest.mark.usefixtures("db")
+def test_two_host_headers_are_refused_and_localhost_is_answered() -> None:
     app = create_app(get_settings())
     status, body = _request(app, [(b"host", b"127.0.0.1:8766"), (b"host", b"localhost:8766")])
     assert (status, body) == (400, b"Bad host")
@@ -112,9 +113,8 @@ def test_a_lifespan_message_reaches_the_app() -> None:
     assert seen == ["lifespan.startup.complete", "lifespan.shutdown.complete"]
 
 
-def test_post_and_a_broken_store_carry_every_header(
-    db: Store, page: TestClient, tmp_path: Path
-) -> None:
+@pytest.mark.usefixtures("db")
+def test_post_and_a_broken_store_carry_every_header(page: TestClient, tmp_path: Path) -> None:
     posted = page.post("/")
     assert posted.status_code == 405
     for name, value in SECURITY_HEADERS.items():
@@ -219,7 +219,7 @@ def test_a_capital_id_is_not_found_without_opening_the_store(
     page: TestClient, monkeypatch: pytest.MonkeyPatch, path: str
 ) -> None:
     class _Closed:
-        def __init__(self, path: object) -> None:
+        def __init__(self, _path: object) -> None:
             raise AssertionError("the store was opened")
 
     monkeypatch.setattr("conductor.web.app.Store", _Closed)

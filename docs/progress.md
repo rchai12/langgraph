@@ -380,3 +380,12 @@ The coding agent appends one entry per phase, in the form `docs/phase-convention
   - Renamed names in moved parts take a _moved suffix (request_moved, answer_moved, Script_moved, script_moved, PASS_REVIEW_moved, ENTRY_1_moved, ENTRY_moved, OPEN_OUTPUT_moved)
 - Follow-ups:
   - None
+
+## Phase 9r: Unused-argument checks (2026-11-22)
+- Tests: 1597 -> 1614 (given 17)
+- New public names: None
+- Changed files: 60
+- Deviations:
+  - None
+- Follow-ups:
+  - None

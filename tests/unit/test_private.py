@@ -55,7 +55,7 @@ def test_a_folder_made_meanwhile_is_accepted(
 ) -> None:
     folder = tmp_path / "a"
 
-    def other_process_first(path, *args, **kwargs) -> None:
+    def other_process_first(path, *_args, **_kwargs) -> None:
         REAL_MKDIR(path)
         os.chmod(path, 0o755)
         raise FileExistsError(path)

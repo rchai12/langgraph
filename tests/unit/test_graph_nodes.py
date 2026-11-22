@@ -12,7 +12,7 @@ from conductor.store import Store
 
 
 class Unused:
-    def run(self, action, args):
+    def run(self, _action, _args):
         raise AssertionError("no step runs here")
 
 

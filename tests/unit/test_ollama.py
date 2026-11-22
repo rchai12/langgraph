@@ -215,7 +215,7 @@ class _Raises:
     def __init__(self, error: BaseException) -> None:
         self._error = error
 
-    def open(self, request: object, timeout: float) -> object:
+    def open(self, _request: object, timeout: float) -> object:  # noqa: ARG002
         raise self._error
 
 

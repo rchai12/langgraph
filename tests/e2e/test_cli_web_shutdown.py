@@ -25,7 +25,7 @@ def served(monkeypatch: pytest.MonkeyPatch) -> Served:
     chosen = Served()
 
     class FakeResumer:
-        def __init__(self, settings: Settings) -> None:
+        def __init__(self, _settings: Settings) -> None:
             self.closes: list[tuple[tuple, dict]] = []
             chosen.resumers.append(self)
 
@@ -33,11 +33,11 @@ def served(monkeypatch: pytest.MonkeyPatch) -> Served:
             self.closes.append((args, kwargs))
             return chosen.left
 
-    def fake_create_app(settings: Settings, *, resumer: object = None) -> str:
+    def fake_create_app(_settings: Settings, *, resumer: object = None) -> str:
         chosen.handed.append(resumer)
         return "the page"
 
-    def fake_run(app: object, **options: object) -> None:
+    def fake_run(_app: object, **_options: object) -> None:
         if chosen.interrupt:
             raise KeyboardInterrupt
 
@@ -70,8 +70,9 @@ def test_the_page_gets_one_resumer_that_is_closed(served: Served, port: int) -> 
 
 
 @pytest.mark.parametrize(("interrupt", "code"), [(False, 0), (True, 130)])
+@pytest.mark.usefixtures("port")
 def test_runs_left_running_are_named_on_the_way_out(
-    served: Served, port: int, interrupt: bool, code: int
+    served: Served, interrupt: bool, code: int
 ) -> None:
     served.left = LEFT
     served.interrupt = interrupt

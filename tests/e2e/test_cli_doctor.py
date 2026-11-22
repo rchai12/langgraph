@@ -58,7 +58,7 @@ def test_ollama_not_running(tmp_path: Path) -> None:
     ],
 )
 def test_something_else_answering(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, status: int, body: bytes
+    monkeypatch: pytest.MonkeyPatch, status: int, body: bytes
 ) -> None:
     with fake_ollama() as (fake, host):
         fake.status = status

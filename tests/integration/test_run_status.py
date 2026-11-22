@@ -28,7 +28,7 @@ def model(*rows: tuple[str, str]) -> ScriptedModel:
 
 
 def forbid_execution(monkeypatch: pytest.MonkeyPatch) -> None:
-    def forbidden(*args: object, **kwargs: object) -> None:
+    def forbidden(*_args: object, **_kwargs: object) -> None:
         raise AssertionError("status read constructed execution services")
 
     for name in (

@@ -269,7 +269,7 @@ def _record_escalation(services: Services):
 
 
 def _wait_escalation(services: Services):
-    def wait_escalation(state: State, config: RunnableConfig) -> Command:
+    def wait_escalation(state: State) -> Command:
         escalation_id = cast(str, state["escalation_id"])
         interrupt({"escalation_id": escalation_id})
         recorded = cast(EscalationAnswer, services.store.escalation(escalation_id).answer)

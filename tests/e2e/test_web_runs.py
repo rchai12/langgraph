@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import pytest
 from fastapi.testclient import TestClient
 
@@ -22,10 +20,10 @@ class StillResuming:
     def start(self, run_id: str) -> None:
         pass
 
-    def running(self, run_id: str) -> bool:
+    def running(self, _run_id: str) -> bool:
         return self.busy
 
-    def error(self, run_id: str) -> str | None:
+    def error(self, _run_id: str) -> str | None:
         return self.last
 
 
@@ -74,7 +72,7 @@ def test_a_run_that_is_not_there(run_id: str) -> None:
     assert (response.status_code, response.text) == (404, "Not found")
 
 
-def test_a_decision_resumes_the_run_in_the_background(tmp_path: Path) -> None:
+def test_a_decision_resumes_the_run_in_the_background() -> None:
     state = waiting_run()
     resumer = Resumer(get_settings())
     page = TestClient(create_app(get_settings(), resumer=resumer), base_url=BASE)

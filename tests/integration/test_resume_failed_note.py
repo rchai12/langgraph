@@ -52,7 +52,7 @@ def test_a_failed_note_records_its_type_and_keeps_both_decisions(
             note="",
         )
 
-    def broken(self: DemoRunner, action: object, args: object) -> dict:
+    def broken(_self: DemoRunner, _action: object, _args: object) -> dict:
         raise ValueError(SECRET)
 
     monkeypatch.setattr(DemoRunner, "run", broken)

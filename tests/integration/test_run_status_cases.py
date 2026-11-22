@@ -179,7 +179,7 @@ def test_resume_of_a_malformed_run_does_not_look_up_or_invoke(
         opened.graph.checkpointer.conn.execute("UPDATE checkpoints SET checkpoint = ?", (b"nope",))
         opened.graph.checkpointer.conn.commit()
 
-        def forbidden(*args: object, **kwargs: object) -> None:
+        def forbidden(*_args: object, **_kwargs: object) -> None:
             raise AssertionError("resume inspected a decision or invoked the graph")
 
         monkeypatch.setattr(opened.store, "approval", forbidden)
@@ -198,7 +198,7 @@ def test_a_leased_run_can_be_read_without_execution(monkeypatch: pytest.MonkeyPa
         with pytest.raises(LeaseHeld):
             opened.store.acquire(waiting.run_id, "f" * 32)
 
-    def forbidden(*args: object, **kwargs: object) -> None:
+    def forbidden(*_args: object, **_kwargs: object) -> None:
         raise AssertionError("the read invoked, leased, logged, or minted an id")
 
     acquire = Store.acquire
@@ -228,7 +228,7 @@ def test_a_path_with_reserved_characters_reads_without_writing(
     assert settings.checkpoints_path.read_bytes() == before
 
 
-def test_a_corrupt_blob_and_failed_reads_are_unavailable(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_a_corrupt_blob_and_failed_reads_are_unavailable() -> None:
     settings = get_settings()
     with runtime.open_runtime(settings, model=scripted(("plan", NOTE))) as opened:
         waiting = runtime.ask(opened, "demo: note Milk")

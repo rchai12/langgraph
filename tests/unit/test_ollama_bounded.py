@@ -80,7 +80,7 @@ class _Recorder:
     def __init__(self) -> None:
         self.timeouts: list[float] = []
 
-    def open(self, request: object, timeout: float) -> object:
+    def open(self, _request: object, timeout: float) -> object:
         self.timeouts.append(timeout)
         raise ConnectionResetError
 

@@ -116,7 +116,7 @@ def test_a_rule_route_asks_the_model_only_to_plan(tmp_path: Path) -> None:
     assert [request.point for request in model.requests] == ["plan"]
 
 
-def test_the_overall_line(tmp_path: Path) -> None:
+def test_the_overall_line() -> None:
     first = CaseResult("a", 2, 2, 2, 2, 2, 2, 0, 0, (1.0, 2.0))
     second = CaseResult("b", 2, 1, 2, 1, None, 1, 1, 1, (3.0, 4.0))
     assert overall_line((first, second)) == (

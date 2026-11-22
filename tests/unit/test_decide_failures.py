@@ -34,7 +34,7 @@ def test_the_request_is_on_disk_when_chat_is_called(tmp_path: Path) -> None:
         def model_info(self, name: str) -> ModelInfo:
             return replace(SCRIPTED_INFO, name=name)
 
-        def chat(self, request: object) -> ModelReply:
+        def chat(self, _request: object) -> ModelReply:
             seen.extend(event.kind for event in log.read(RUN))
             return ModelReply(content='{"action": "echo"}')
 
@@ -104,7 +104,7 @@ def test_a_failing_reply_is_asked_once(tmp_path: Path) -> None:
         def model_info(self, name: str) -> ModelInfo:
             return replace(SCRIPTED_INFO, name=name)
 
-        def chat(self, request: object) -> ModelReply:
+        def chat(self, _request: object) -> ModelReply:
             self.calls += 1
             return ModelReply(content="not json")
 

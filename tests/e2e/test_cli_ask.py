@@ -49,7 +49,7 @@ def replies(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, str]]:
     real = runtime.open_runtime
 
     @contextmanager
-    def scripted(settings, *, model=None):
+    def scripted(settings, *, _model=None):
         answers = [ScriptedReply(point, ModelReply(content=text)) for point, text in queue]
         queue.clear()
         with real(settings, model=ScriptedModel(answers)) as opened:
@@ -111,7 +111,8 @@ def test_no_resume_only_records_and_resume_continues(replies: list) -> None:
     assert (resumed.exit_code, resumed.stdout) == (0, plan_block(7, 2, "step"))
 
 
-def test_an_escalation_and_its_answers(replies: list) -> None:
+@pytest.mark.usefixtures("replies")
+def test_an_escalation_and_its_answers() -> None:
     asked = run("ask", "Say hi back to me")
     assert (asked.exit_code, asked.stdout) == (
         0,
@@ -162,7 +163,7 @@ def test_a_busy_run_keeps_the_decision_and_says_why(replies: list) -> None:
     )
 
 
-@pytest.mark.usefixtures("demo_on")
+@pytest.mark.usefixtures("demo_on", "replies")
 @pytest.mark.parametrize(
     ("args", "message"),
     [
@@ -170,7 +171,7 @@ def test_a_busy_run_keeps_the_decision_and_says_why(replies: list) -> None:
         (("resume", "9" * 32), f"Error: no run {'9' * 32}\n"),
     ],
 )
-def test_errors(replies: list, args: tuple[str, ...], message: str) -> None:
+def test_errors(args: tuple[str, ...], message: str) -> None:
     result = run(*args)
     assert (result.exit_code, result.stdout, result.stderr) == (1, "", message)
 
@@ -223,7 +224,7 @@ def test_resume_json_of_a_waiting_run_and_a_bad_demo_setting(
 def test_stopped_plain_rejection_and_escalation_problems(
     replies: list, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    def stopped(opened: object, run_id: str) -> RunState:
+    def stopped(_opened: object, run_id: str) -> RunState:
         return RunState(run_id=run_id, status="stopped", stopped_at="plan")
 
     real_resume = runtime.resume
@@ -280,7 +281,8 @@ def test_an_edit_resumes_with_the_new_arguments_and_a_decline_waits(replies: lis
     assert Store(get_settings().db_path).pending()
 
 
-def test_retry_without_resume_and_cancel_that_resumes(replies: list) -> None:
+@pytest.mark.usefixtures("replies")
+def test_retry_without_resume_and_cancel_that_resumes() -> None:
     run("ask", "Say hi back to me")
     first = Store(get_settings().db_path).open_escalations()[0]
     recorded = run("escalations", "retry", first.escalation_id, "--yes", "--no-resume")
@@ -313,7 +315,8 @@ def test_a_busy_reject_keeps_the_rejection(replies: list) -> None:
     assert decision is not None and decision.verdict == "reject"
 
 
-def test_a_request_of_2001_characters_is_refused(replies: list) -> None:
+@pytest.mark.usefixtures("replies")
+def test_a_request_of_2001_characters_is_refused() -> None:
     result = run("ask", "y" * 2001)
     assert (result.exit_code, result.stdout, result.stderr) == (
         1,

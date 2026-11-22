@@ -55,7 +55,8 @@ def shown(args: dict) -> str:
     return str(escape(json.dumps(args, ensure_ascii=False, sort_keys=True)))
 
 
-def test_an_empty_home_page(db: Store, page: TestClient) -> None:
+@pytest.mark.usefixtures("db")
+def test_an_empty_home_page(page: TestClient) -> None:
     response = page.get("/")
     assert response.status_code == 200
     assert response.headers["content-type"] == "text/html; charset=utf-8"
@@ -139,7 +140,8 @@ def test_an_escalation_and_its_answer(db: Store, page: TestClient) -> None:
 @pytest.mark.parametrize(
     "path", [f"/approvals/{'9' * 32}", f"/escalations/{'9' * 32}", "/approvals/not-an-id"]
 )
-def test_what_is_not_there(db: Store, page: TestClient, path: str) -> None:
+@pytest.mark.usefixtures("db")
+def test_what_is_not_there(page: TestClient, path: str) -> None:
     response = page.get(path)
     assert (response.status_code, response.text) == (404, "Not found")
 
@@ -152,27 +154,31 @@ def test_text_from_a_request_is_escaped(db: Store, page: TestClient) -> None:
 
 
 @pytest.mark.parametrize("host", ["evil.example", "127.0.0.1:8765", "localhost"])
-def test_only_this_server_by_name_is_answered(db: Store, host: str) -> None:
+@pytest.mark.usefixtures("db")
+def test_only_this_server_by_name_is_answered(host: str) -> None:
     client = TestClient(create_app(get_settings()), base_url=f"http://{host}")
     response = client.get("/")
     assert (response.status_code, response.text) == (400, "Bad host")
     assert response.headers["x-frame-options"] == "DENY"
 
 
-def test_localhost_by_port_is_answered(db: Store) -> None:
+@pytest.mark.usefixtures("db")
+def test_localhost_by_port_is_answered() -> None:
     client = TestClient(create_app(get_settings()), base_url="http://localhost:8766")
     assert client.get("/").status_code == 200
 
 
 @pytest.mark.parametrize("path", ["/", f"/approvals/{'9' * 32}"])
-def test_every_answer_carries_the_security_headers(db: Store, page: TestClient, path: str) -> None:
+@pytest.mark.usefixtures("db")
+def test_every_answer_carries_the_security_headers(page: TestClient, path: str) -> None:
     response = page.get(path)
     for name, value in SECURITY_HEADERS.items():
         assert response.headers[name] == value
     assert "server" not in response.headers
 
 
-def test_the_headers(db: Store) -> None:
+@pytest.mark.usefixtures("db")
+def test_the_headers() -> None:
     assert SECURITY_HEADERS == {
         "content-security-policy": (
             "default-src 'self'; script-src 'none'; style-src 'self'; img-src 'self'; "
@@ -188,7 +194,8 @@ def test_the_headers(db: Store) -> None:
 @pytest.mark.parametrize(
     ("method", "path"), [("post", "/"), ("get", "/docs"), ("get", "/openapi.json")]
 )
-def test_nothing_else_is_served(db: Store, page: TestClient, method: str, path: str) -> None:
+@pytest.mark.usefixtures("db")
+def test_nothing_else_is_served(page: TestClient, method: str, path: str) -> None:
     assert getattr(page, method)(path).status_code in (404, 405)
 
 

@@ -32,7 +32,7 @@ class Script:
         self.entered = threading.Semaphore(0)
         self.release = threading.Event()
 
-    def resume(self, opened: object, run_id: str) -> None:
+    def resume(self, _opened: object, run_id: str) -> None:
         self.calls.append(run_id)
         self.daemon.append(threading.current_thread().daemon)
         self.entered.release()
@@ -50,7 +50,7 @@ def script(monkeypatch: pytest.MonkeyPatch) -> Iterator[Script]:
     chosen = Script()
 
     @contextmanager
-    def fake_open(settings: Settings) -> Iterator[object]:
+    def fake_open(_settings: Settings) -> Iterator[object]:
         yield object()
 
     monkeypatch.setattr(runtime, "open_runtime", fake_open)
@@ -207,7 +207,7 @@ class Script_moved:
         self.entered = threading.Semaphore(0)
         self.release = threading.Event()
 
-    def resume(self, opened: object, chosen: str) -> None:
+    def resume(self, _opened: object, chosen: str) -> None:
         self.calls.append(chosen)
         self.entered.release()
         outcome = self.outcomes.get(chosen, "ok")
@@ -227,7 +227,7 @@ def script_moved(monkeypatch: pytest.MonkeyPatch) -> Iterator[Script_moved]:
     chosen = Script_moved()
 
     @contextmanager
-    def fake_open(settings: Settings) -> Iterator[object]:
+    def fake_open(_settings: Settings) -> Iterator[object]:
         yield object()
 
     monkeypatch.setattr(runtime, "open_runtime", fake_open)

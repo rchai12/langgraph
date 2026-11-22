@@ -207,7 +207,7 @@ class SwappedModel:
     def model_info(self, name: str) -> ModelInfo:
         return ModelInfo(name=name, digest=next(self.digests), capabilities=())
 
-    def chat(self, request) -> ModelReply:
+    def chat(self, _request) -> ModelReply:
         return ModelReply(content='{"action": "note"}')
 
 

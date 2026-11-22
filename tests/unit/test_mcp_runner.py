@@ -61,7 +61,7 @@ def runner_with(outcome: ToolOutcome | McpUnavailable):
     client = FakeClient(outcome)
     servers: list[McpServer] = []
 
-    def connect(server: McpServer, settings):
+    def connect(server: McpServer, _settings):
         servers.append(server)
         return client
 
@@ -138,7 +138,7 @@ def test_the_domain_runner_sends_each_action_to_its_runner(
     monkeypatch.setenv("CONDUCTOR_DEMO", "true")
     registry = Registry((FINANCE, demo.DOMAIN))
     client = FakeClient(ToolOutcome(False, {"rows": []}))
-    runner = DomainRunner(registry, get_settings(), connect=lambda server, settings: client)
+    runner = DomainRunner(registry, get_settings(), connect=lambda _server, _settings: client)
     assert runner.run(SPEND, Query(month="2026-10")) == {"rows": []}
     delegate = next(a for a in demo.DOMAIN.actions if a.name == "delegate")
     assert runner.run(delegate, demo.DelegateArgs(task="tidy")) == {"summary": DEMO_SUMMARY}
@@ -197,7 +197,7 @@ def test_each_action_calls_its_own_server_once() -> None:
             calls.append((self.name, name))
             return ToolOutcome(False, {"value": arguments["value"]})
 
-    def connect(server: McpServer, settings: object) -> Client:
+    def connect(server: McpServer, _settings: object) -> Client:
         seen.append(server)
         return Client(server.name)
 
@@ -224,10 +224,10 @@ def test_unknown_keys_only_give_nothing_and_the_graph_refuses_it(tmp_path: Path)
     registry = Registry((Domain("lab", "Lab.", (echo,), servers=(McpServer("fake"),)),))
 
     class Client:
-        def call_tool(self, name: str, arguments: dict) -> ToolOutcome:
+        def call_tool(self, _name: str, _arguments: dict) -> ToolOutcome:
             return ToolOutcome(False, {"extra": "x"})
 
-    runner = McpRunner(registry, get_settings(), connect=lambda server, settings: Client())
+    runner = McpRunner(registry, get_settings(), connect=lambda _server, _settings: Client())
     assert runner.run(echo, Text(text="hi")) == {}
     state = _start(tmp_path, registry, runner)
     stored = Store(tmp_path / "conductor.db").escalation(state.escalation_id)
@@ -238,7 +238,7 @@ class _Raiser:
     def __init__(self, error: StepFailed) -> None:
         self.error = error
 
-    def run(self, action: Action, args: Contract) -> dict:
+    def run(self, _action: Action, _args: Contract) -> dict:
         raise self.error
 
 
@@ -282,12 +282,12 @@ def _spend(outcome: ToolOutcome | McpUnavailable):
     registry = Registry((Domain("finance", "Money.", (action,), servers=(McpServer("ledger"),)),))
 
     class Client:
-        def call_tool(self, name: str, arguments: dict) -> ToolOutcome:
+        def call_tool(self, _name: str, _arguments: dict) -> ToolOutcome:
             if isinstance(outcome, McpUnavailable):
                 raise outcome
             return outcome
 
-    runner = McpRunner(registry, get_settings(), connect=lambda server, settings: Client())
+    runner = McpRunner(registry, get_settings(), connect=lambda _server, _settings: Client())
     with pytest.raises(StepFailed) as raised:
         runner.run(action, Query(month="2026-10"))
     return raised

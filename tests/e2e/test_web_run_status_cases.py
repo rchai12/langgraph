@@ -27,10 +27,10 @@ class Still:
     def start(self, run_id: str) -> None:
         self.started.append(run_id)
 
-    def running(self, run_id: str) -> bool:
+    def running(self, _run_id: str) -> bool:
         return self.busy
 
-    def error(self, run_id: str) -> str | None:
+    def error(self, _run_id: str) -> str | None:
         return self.last
 
 
@@ -78,7 +78,7 @@ def test_a_done_page_escapes_and_a_get_does_not_decide(monkeypatch: pytest.Monke
     with runtime.open_runtime(settings, model=model) as opened:
         done = runtime.ask(opened, "demo: say hi")
 
-    def forbidden(*args: object, **kwargs: object) -> None:
+    def forbidden(*_args: object, **_kwargs: object) -> None:
         raise AssertionError("GET resumed or recorded a decision")
 
     monkeypatch.setattr(runtime, "resume", forbidden)

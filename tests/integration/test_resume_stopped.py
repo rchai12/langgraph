@@ -58,7 +58,7 @@ def test_a_run_stopped_at_a_model_call_runs_that_node_again(
 def test_a_run_stopped_at_a_step_stays_stopped(monkeypatch: pytest.MonkeyPatch) -> None:
     calls: list[str] = []
 
-    def broken(self, action, args):
+    def broken(_self, action, _args):
         calls.append(action.name)
         raise RuntimeError("the runner broke")
 

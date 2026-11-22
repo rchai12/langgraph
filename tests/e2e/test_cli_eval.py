@@ -34,7 +34,7 @@ def cases(tmp_path: Path) -> Path:
 @pytest.fixture
 def model(monkeypatch: pytest.MonkeyPatch) -> list[ScriptedReply]:
     replies: list[ScriptedReply] = []
-    monkeypatch.setattr(evals_run, "model_for", lambda settings: ScriptedModel(replies))
+    monkeypatch.setattr(evals_run, "model_for", lambda _settings: ScriptedModel(replies))
     monkeypatch.setenv("CONDUCTOR_DEMO", "true")
     return replies
 
@@ -84,12 +84,14 @@ def test_runs_are_logged_under_the_data_folder(cases: Path, model: list, tmp_pat
         (("--cases", "nowhere"), "Error: no case files at nowhere\n"),
     ],
 )
-def test_errors(cases: Path, model: list, args: tuple[str, ...], message: str) -> None:
+@pytest.mark.usefixtures("cases", "model")
+def test_errors(args: tuple[str, ...], message: str) -> None:
     result = run("eval", "run", *args)
     assert (result.exit_code, result.stdout, result.stderr) == (1, "", message)
 
 
-def test_a_bad_case_file_names_itself(cases: Path, model: list) -> None:
+@pytest.mark.usefixtures("model")
+def test_a_bad_case_file_names_itself(cases: Path) -> None:
     bad = cases / "bad.toml"
     bad.write_text('[[case]]\nid = "x"\nrequest = "hi"\nroute = "travel"\n', encoding="utf-8")
     result = run("eval", "run", "--cases", cases)

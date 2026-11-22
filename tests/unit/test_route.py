@@ -75,10 +75,10 @@ Answer with one JSON object that matches this JSON schema:
 class NoModel:
     """A model that must not be asked."""
 
-    def model_info(self, name: str):
+    def model_info(self, _name: str):
         raise AssertionError("the model was asked")
 
-    def chat(self, request):
+    def chat(self, _request):
         raise AssertionError("the model was asked")
 
 

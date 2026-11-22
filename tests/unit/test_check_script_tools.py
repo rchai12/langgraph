@@ -57,7 +57,7 @@ def _repo(tmp_path: Path) -> Path:
 
 
 def _fake(seen: list[str]):
-    def run(command: str, cwd: Path) -> tuple[int, str]:
+    def run(command: str, _cwd: Path) -> tuple[int, str]:
         seen.append(command)
         if command.startswith("git grep"):
             return 1, ""
@@ -211,7 +211,7 @@ def test_spot_check_a_surviving_mutation_exits_one(tmp_path, capsys) -> None:
     spot = _load("spot_check")
     root = _scratch(tmp_path)
     argv = ["src/pkg/limit.py", "--old", "3", "--new", "4", "--test", "t", "--root", str(root)]
-    assert spot.main(argv, lambda test, cwd: (0, "")) == 1
+    assert spot.main(argv, lambda _test, _cwd: (0, "")) == 1
     assert capsys.readouterr().out == "passes\n"
 
 
@@ -230,7 +230,7 @@ def test_spot_check_refusals(tmp_path, capsys, module: str, old: str, message: s
     (root / "pkg").mkdir()
     (root / "pkg" / "limit.py").write_text("LIMIT = 3\n", encoding="utf-8")
     argv = [module, "--old", old, "--new", "4", "--test", "t", "--root", str(root)]
-    assert spot.main(argv, lambda test, cwd: (0, "")) == 2
+    assert spot.main(argv, lambda _test, _cwd: (0, "")) == 2
     assert capsys.readouterr().err.strip() == message
 
 
@@ -238,7 +238,7 @@ def test_spot_check_refuses_the_repository_itself(capsys) -> None:
     spot = _load("spot_check")
     root = SCRIPTS.parent
     argv = ["src/conductor/ids.py", "--old", "x", "--new", "y", "--test", "t", "--root", str(root)]
-    assert spot.main(argv, lambda test, cwd: (0, "")) == 2
+    assert spot.main(argv, lambda _test, _cwd: (0, "")) == 2
     message = "Error: run spot checks in a scratch copy, not the repository"
     assert capsys.readouterr().err.strip() == message
 
@@ -248,7 +248,7 @@ def test_check_quiet_logs_output_and_shows_a_failed_tail(tmp_path, capsys) -> No
     logs = tmp_path / "logs"
     calls: list[Path | None] = []
 
-    def run(command: list[str], cwd: Path, log: Path | None) -> int:
+    def run(_command: list[str], _cwd: Path, log: Path | None) -> int:
         calls.append(log)
         assert log is not None
         log.write_text("\n".join(f"line {n}" for n in range(1, 31)) + "\n", encoding="utf-8")
@@ -267,7 +267,7 @@ def test_check_quiet_section_shows_a_failed_tail(tmp_path, capsys) -> None:
     check = _load("check")
     logs = tmp_path / "logs"
 
-    def run(command: list[str], cwd: Path, log: Path | None) -> int:
+    def run(_command: list[str], _cwd: Path, log: Path | None) -> int:
         assert log == logs / "section.log"
         log.write_text("boom\n", encoding="utf-8")
         return 1

@@ -33,10 +33,10 @@ class Still:
     def start(self, run_id: str) -> None:
         self.started.append(run_id)
 
-    def running(self, run_id: str) -> bool:
+    def running(self, _run_id: str) -> bool:
         return self.busy
 
-    def error(self, run_id: str) -> str | None:
+    def error(self, _run_id: str) -> str | None:
         return self.last
 
 
@@ -44,7 +44,7 @@ class Raising(ScriptedModel):
     def __init__(self) -> None:
         super().__init__([])
 
-    def chat(self, request):
+    def chat(self, _request):
         raise RuntimeError(SECRET)
 
 
@@ -93,7 +93,7 @@ def make(case: str, monkeypatch: pytest.MonkeyPatch) -> str:
         return stopped_at_plan()
     if case == "stopped at a step":
 
-        def broken(self, action, args):
+        def broken(_self, _action, _args):
             raise RuntimeError(SECRET)
 
         working = DemoRunner.run
@@ -233,7 +233,7 @@ def test_a_store_that_fails_hides_the_button_and_refuses_the_post(
 ) -> None:
     state = waiting(decided=True)
 
-    def unavailable(self, approval_id):
+    def unavailable(_self, _approval_id):
         raise StoreError("conductor.db: busy")
 
     monkeypatch.setattr(Store, "approval", unavailable)
@@ -256,7 +256,7 @@ class Raising_moved(ScriptedModel):
     def __init__(self) -> None:
         super().__init__([])
 
-    def chat(self, request: object) -> ModelReply:
+    def chat(self, _request: object) -> ModelReply:
         raise RuntimeError("SYNTHETIC-SECRET")
 
 
@@ -310,7 +310,7 @@ def test_a_missing_or_unreadable_state_is_refused(monkeypatch: pytest.MonkeyPatc
     missing = post_moved(page, "b" * 32)
     assert (missing.status_code, missing.text) == (404, "Not found")
 
-    def unavailable(settings: object, run_id: str) -> None:
+    def unavailable(_settings: object, run_id: str) -> None:
         raise RunStateUnavailable(f"run {run_id} state is not available")
 
     monkeypatch.setattr(runtime, "read_state", unavailable)

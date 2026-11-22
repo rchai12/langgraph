@@ -39,7 +39,7 @@ target-version = "py312"
 extend-exclude = ["docs"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "B", "UP"]
+select = ["E", "F", "I", "B", "UP", "ARG"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

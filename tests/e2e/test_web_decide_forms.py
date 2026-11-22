@@ -25,10 +25,10 @@ class FakeResumer:
     def start(self, run_id: str) -> None:
         self.started.append(run_id)
 
-    def running(self, run_id: str) -> bool:
+    def running(self, _run_id: str) -> bool:
         return False
 
-    def error(self, run_id: str) -> str | None:
+    def error(self, _run_id: str) -> str | None:
         return None
 
 
@@ -78,7 +78,7 @@ def test_a_bad_token_does_not_open_the_store(db: Store, monkeypatch: pytest.Monk
     page.get(f"/approvals/{FIRST}")
 
     class _Closed:
-        def __init__(self, path: object) -> None:
+        def __init__(self, _path: object) -> None:
             raise AssertionError("the store was opened")
 
     monkeypatch.setattr("conductor.web.app.Store", _Closed)
@@ -99,7 +99,7 @@ def test_a_bad_token_does_not_open_the_store(db: Store, monkeypatch: pytest.Monk
 
 
 def test_an_unknown_action_is_refused_and_a_broken_store_is_unavailable(
-    db: Store, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    db: Store, tmp_path: Path
 ) -> None:
     _add(db)
     page = _page()
@@ -192,7 +192,7 @@ def test_finished_runs_show_their_line(monkeypatch: pytest.MonkeyPatch) -> None:
         "5" * 32: RunState(run_id="5" * 32, status="waiting", escalation_id="e" * 32),
     }
 
-    monkeypatch.setattr(runtime, "read_state", lambda settings, run_id: states[run_id])
+    monkeypatch.setattr(runtime, "read_state", lambda _settings, run_id: states[run_id])
     page = _page()
     done = page.get(f"/runs/{'1' * 32}").text
     assert "done" in done

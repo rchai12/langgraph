@@ -50,7 +50,8 @@ SHOWN = (
 )
 
 
-def test_nothing_pending(db: Store) -> None:
+@pytest.mark.usefixtures("db")
+def test_nothing_pending() -> None:
     result = run("approvals", "list")
     assert (result.exit_code, result.stdout) == (0, "No pending approvals.\n")
 

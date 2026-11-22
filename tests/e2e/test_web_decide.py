@@ -26,10 +26,10 @@ class FakeResumer:
     def start(self, run_id: str) -> None:
         self.started.append(run_id)
 
-    def running(self, run_id: str) -> bool:
+    def running(self, _run_id: str) -> bool:
         return False
 
-    def error(self, run_id: str) -> str | None:
+    def error(self, _run_id: str) -> str | None:
         return None
 
 

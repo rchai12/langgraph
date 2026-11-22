@@ -19,7 +19,7 @@ class Runner:
         self.error = error
         self.calls: list[str] = []
 
-    def run(self, action, args):
+    def run(self, action, _args):
         self.calls.append(action.name)
         if self.error is not None:
             raise self.error

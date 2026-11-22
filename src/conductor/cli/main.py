@@ -23,7 +23,7 @@ def doctor() -> None:
 
 @app.command()
 def ask(request: str, json_output: Annotated[bool, typer.Option("--json")] = False) -> None:
-    def work(settings: Settings, opened: runtime.Runtime) -> None:
+    def work(_settings: Settings, opened: runtime.Runtime) -> None:
         common.emit(opened, runtime.ask(opened, request), json_output)
 
     common.with_runtime(work)
@@ -31,7 +31,7 @@ def ask(request: str, json_output: Annotated[bool, typer.Option("--json")] = Fal
 
 @app.command()
 def resume(run_id: str, json_output: Annotated[bool, typer.Option("--json")] = False) -> None:
-    def work(settings: Settings, opened: runtime.Runtime) -> None:
+    def work(_settings: Settings, opened: runtime.Runtime) -> None:
         common.emit(opened, runtime.resume(opened, run_id), json_output)
 
     common.with_runtime(work)

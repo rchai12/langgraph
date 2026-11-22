@@ -213,7 +213,7 @@ def _leaves(error: BaseException) -> tuple[BaseException, ...]:
 def test_an_unexpected_session_error_passes_through(
     fake_moved, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    async def broken(self: object) -> None:
+    async def broken(_self: object) -> None:
         raise RuntimeError("session broke")
 
     monkeypatch.setattr("conductor.mcp_client.client.ClientSession.initialize", broken)
@@ -223,7 +223,7 @@ def test_an_unexpected_session_error_passes_through(
 
 
 def test_a_bare_connection_error_is_closed(fake_moved, monkeypatch: pytest.MonkeyPatch) -> None:
-    def boom(*args: object, **kwargs: object) -> None:
+    def boom(*_args: object, **_kwargs: object) -> None:
         raise MCPError(-32000, "Connection closed")
 
     monkeypatch.setattr("conductor.mcp_client.client.stdio_client", boom)
@@ -234,7 +234,7 @@ def test_a_bare_connection_error_is_closed(fake_moved, monkeypatch: pytest.Monke
 
 
 def test_a_closed_connection_and_a_mixed_group(fake_moved, monkeypatch: pytest.MonkeyPatch) -> None:
-    async def closed(self: object) -> None:
+    async def closed(_self: object) -> None:
         raise MCPError(-32000, "Connection closed")
 
     monkeypatch.setattr("conductor.mcp_client.client.ClientSession.initialize", closed)
@@ -242,7 +242,7 @@ def test_a_closed_connection_and_a_mixed_group(fake_moved, monkeypatch: pytest.M
         fake_moved.list_tools()
     assert (raised.value.code, raised.value.__cause__) == ("closed", None)
 
-    async def mixed(self: object) -> None:
+    async def mixed(_self: object) -> None:
         raise ExceptionGroup("mixed", [MCPError(-32000, "Connection closed"), RuntimeError("nope")])
 
     monkeypatch.setattr("conductor.mcp_client.client.ClientSession.initialize", mixed)

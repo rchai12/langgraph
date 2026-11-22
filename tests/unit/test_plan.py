@@ -72,10 +72,10 @@ RANGE = Domain(
 
 
 class NoModel:
-    def model_info(self, name: str):
+    def model_info(self, _name: str):
         raise AssertionError("the model was asked")
 
-    def chat(self, request):
+    def chat(self, _request):
         raise AssertionError("the model was asked")
 
 
@@ -228,7 +228,7 @@ def test_a_check_in_the_arguments_counts_as_invalid_output(tmp_path: Path) -> No
 def test_a_plan_the_check_refuses_escalates(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    def refuse(plan: Plan, route: Route, registry: Registry):
+    def refuse(_plan: Plan, _route: Route, _registry: Registry):
         raise PlanRejected((FieldProblem(loc="steps.0.action", code="unknown_action"),))
 
     monkeypatch.setattr(plancheck, "check_plan", refuse)
@@ -260,7 +260,7 @@ def test_a_route_to_an_unregistered_domain_is_a_mistake(tmp_path: Path) -> None:
     assert str(raised.value) == "no domain lab"
 
 
-def test_a_domain_of_one_action(tmp_path: Path) -> None:
+def test_a_domain_of_one_action() -> None:
     output = plan_point(RANGE).output
     assert output.from_json('{"steps": [{"action": "scan", "args": {"low": 1, "high": 2}}]}')
     with pytest.raises(ValidationError):
@@ -343,7 +343,7 @@ def test_omitted_arguments_keep_their_defaults_and_eight_steps_plan(tmp_path: Pa
 def test_a_secret_stays_out_of_every_escalation(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    def refuse(plan: Plan, route: Route, registry: Registry) -> None:
+    def refuse(_plan: Plan, _route: Route, _registry: Registry) -> None:
         raise PlanRejected((FieldProblem(loc="steps.0.action", code="unknown_action"),))
 
     monkeypatch.setattr(plancheck, "check_plan", refuse)

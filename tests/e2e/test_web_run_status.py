@@ -34,7 +34,7 @@ def test_run_page_does_not_open_an_execution_runtime(monkeypatch: pytest.MonkeyP
     with runtime.open_runtime(settings, model=model) as opened:
         waiting = runtime.ask(opened, "demo: note Milk")
 
-    def forbidden(*args: object, **kwargs: object) -> None:
+    def forbidden(*_args: object, **_kwargs: object) -> None:
         raise AssertionError("GET opened an execution runtime")
 
     monkeypatch.setattr(runtime, "open_runtime", forbidden)
@@ -57,7 +57,7 @@ def test_missing_run_page_creates_no_storage(run_id: str) -> None:
 def test_malformed_saved_state_is_a_generic_503(monkeypatch: pytest.MonkeyPatch) -> None:
     error_type = import_module("conductor.graph.status").RunStateUnavailable
 
-    def unreadable(*args: object, **kwargs: object) -> None:
+    def unreadable(*_args: object, **_kwargs: object) -> None:
         raise error_type("SYNTHETIC-SECRET")
 
     monkeypatch.setattr(runtime, "read_state", unreadable)

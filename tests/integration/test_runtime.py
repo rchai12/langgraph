@@ -136,7 +136,7 @@ def test_the_demo_runner(action: str, args: object, output: dict) -> None:
 
 
 @pytest.mark.usefixtures("demo_on")
-def test_a_busy_run_is_refused(tmp_path: Path) -> None:
+def test_a_busy_run_is_refused() -> None:
     with open_runtime(get_settings(), model=scripted(("plan", NOTE_PLAN))) as runtime:
         waiting = ask(runtime, "demo: note Milk")
         approve(runtime, waiting.approval_id)
@@ -149,7 +149,7 @@ def test_a_busy_run_is_refused(tmp_path: Path) -> None:
 
 @pytest.mark.usefixtures("demo_on")
 def test_the_lease_is_held_only_during_a_call_and_renewed_before_each_model_call_and_step(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     renewals: list[tuple[str, str]] = []
     real = Store.renew
@@ -168,7 +168,7 @@ def test_the_lease_is_held_only_during_a_call_and_renewed_before_each_model_call
 
 
 @pytest.mark.usefixtures("demo_on")
-def test_a_run_that_raises_releases_its_lease_and_stops(tmp_path: Path) -> None:
+def test_a_run_that_raises_releases_its_lease_and_stops() -> None:
     with open_runtime(get_settings(), model=scripted()) as runtime:
         with pytest.raises(Exception, match="no scripted reply left for plan"):
             ask(runtime, "demo: say hi")
@@ -196,7 +196,7 @@ class StealingModel(ScriptedModel):
 
 
 @pytest.mark.usefixtures("demo_on")
-def test_a_lost_lease_stops_the_run_before_its_step_runs(tmp_path: Path) -> None:
+def test_a_lost_lease_stops_the_run_before_its_step_runs() -> None:
     model = StealingModel([ScriptedReply("plan", ModelReply(content=ECHO_PLAN))])
     with open_runtime(get_settings(), model=model) as runtime:
 

@@ -58,7 +58,7 @@ def time(monkeypatch: pytest.MonkeyPatch) -> Clock:
 
 
 @pytest.fixture
-def db(tmp_path: Path, time: Clock) -> Store:
+def db(tmp_path: Path, time: Clock) -> Store:  # noqa: ARG001
     return Store(tmp_path / "data" / "conductor.db")
 
 
@@ -97,7 +97,8 @@ def answer(escalation_id: str, verdict: str = "retry") -> EscalationAnswer:
     )
 
 
-def test_a_new_store_is_private_and_versioned(tmp_path: Path, db: Store) -> None:
+@pytest.mark.usefixtures("db")
+def test_a_new_store_is_private_and_versioned(tmp_path: Path) -> None:
     path = tmp_path / "data" / "conductor.db"
     assert stat.S_IMODE(path.stat().st_mode) == 0o600
     assert stat.S_IMODE(path.parent.stat().st_mode) == 0o700
@@ -129,8 +130,9 @@ def write_foreign(path: Path, version: int, table: bool) -> None:
         (0, True, "conductor.db: schema version 0 is not supported"),
     ],
 )
+@pytest.mark.usefixtures("time")
 def test_a_store_with_another_schema_is_refused(
-    tmp_path: Path, time: Clock, version: int, table: bool, message: str
+    tmp_path: Path, version: int, table: bool, message: str
 ) -> None:
     path = tmp_path / "conductor.db"
     write_foreign(path, version, table)
@@ -139,7 +141,8 @@ def test_a_store_with_another_schema_is_refused(
     assert str(raised.value) == message
 
 
-def test_a_file_that_is_not_a_database(tmp_path: Path, time: Clock) -> None:
+@pytest.mark.usefixtures("time")
+def test_a_file_that_is_not_a_database(tmp_path: Path) -> None:
     path = tmp_path / "conductor.db"
     path.write_bytes(b"synthetic text, not a database " * 8)
     with pytest.raises(StoreError) as raised:
@@ -334,7 +337,8 @@ def test_a_missing_folder_is_private_and_an_empty_file_gets_the_schema(tmp_path:
     assert names == {"approvals", "escalations", "leases"}
 
 
-def test_operations_leave_no_journal_or_open_transaction(tmp_path: Path, time: Clock) -> None:
+@pytest.mark.usefixtures("time")
+def test_operations_leave_no_journal_or_open_transaction(tmp_path: Path) -> None:
     path = tmp_path / "data" / "conductor.db"
     db = Store(path)
     settled(path)
@@ -362,7 +366,8 @@ def test_operations_leave_no_journal_or_open_transaction(tmp_path: Path, time: C
     settled(path)
 
 
-def test_a_refused_decision_leaves_the_first_one(tmp_path: Path, time: Clock) -> None:
+@pytest.mark.usefixtures("time")
+def test_a_refused_decision_leaves_the_first_one(tmp_path: Path) -> None:
     path = tmp_path / "conductor.db"
     db = Store(path)
     db.add_request(request_moved(1))
@@ -374,7 +379,8 @@ def test_a_refused_decision_leaves_the_first_one(tmp_path: Path, time: Clock) ->
     settled(path)
 
 
-def test_a_damaged_decision_or_escalation_is_refused(tmp_path: Path, time: Clock) -> None:
+@pytest.mark.usefixtures("time")
+def test_a_damaged_decision_or_escalation_is_refused(tmp_path: Path) -> None:
     path = tmp_path / "conductor.db"
     db = Store(path)
     db.add_request(request_moved(1))
@@ -419,7 +425,8 @@ def test_an_expired_lease_can_be_renewed_and_a_missing_lease_is_lost(
         assert str(lost.value) == f"thread {missing} is not leased by this holder"
 
 
-def test_a_retry_note_is_kept(tmp_path: Path, time: Clock) -> None:
+@pytest.mark.usefixtures("time")
+def test_a_retry_note_is_kept(tmp_path: Path) -> None:
     db = Store(tmp_path / "conductor.db")
     raised = db.add_escalation(ESCALATION)
     reply = answer_moved(raised.escalation_id, "Ollama is back")
