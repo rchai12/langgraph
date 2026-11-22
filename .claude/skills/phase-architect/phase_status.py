@@ -52,13 +52,20 @@ def latest_progress() -> list[str]:
 
 def latest_review() -> list[str]:
     folder = Path("docs/reviews")
-    # Spec names sort in build order (phase-01, phase-02a, ...), so the last name is the newest.
-    reviews = sorted(folder.glob("*.md")) if folder.is_dir() else []
-    if not reviews:
+    # Names do not sort in build order (9v before 9r), so take an uncommitted review first,
+    # then the one the last commit under docs/reviews added or changed.
+    if not folder.is_dir() or not list(folder.glob("*.md")):
         return ["(no review yet)"]
-    lines = reviews[-1].read_text(encoding="utf-8").splitlines()
+    pending = git("status", "--porcelain", "--untracked-files=all", "--", str(folder))
+    names = [line[3:] for line in pending.splitlines() if line.endswith(".md")]
+    if not names:
+        names = git(
+            "log", "-1", "--format=", "--name-only", "--diff-filter=AM", "--", str(folder)
+        ).split()
+    newest = Path(names[-1]) if names else sorted(folder.glob("*.md"))[-1]
+    lines = newest.read_text(encoding="utf-8").splitlines()
     block = [line[:WIDTH] for line in lines[:12] if line.startswith(("# ", "- "))]
-    return [str(reviews[-1]), *block]
+    return [str(newest), *block]
 
 
 def added_names() -> list[str]:
