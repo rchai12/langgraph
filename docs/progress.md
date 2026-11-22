@@ -362,3 +362,12 @@ The coding agent appends one entry per phase, in the form `docs/phase-convention
   - The mcp_client fixture fake is renamed fake_moved in the moved part (within the spec); test_supervisor_more.py is renamed test_supervisor_step_runs.py and two importers change one import line each, per correction 1
 - Follow-ups:
   - None
+
+## Phase 9u: Unit test families by behaviour, first half (2026-11-21)
+- Tests: 1566 -> 1581 (given 41)
+- New public names: None
+- Changed files: 23
+- Deviations:
+  - Renamed names in moved parts take a _moved suffix (answer_moved in test_answer.py, db_moved in test_decisions.py)
+- Follow-ups:
+  - None

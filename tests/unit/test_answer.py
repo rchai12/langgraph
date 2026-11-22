@@ -6,9 +6,10 @@ import pytest
 from conductor import clock, ids
 from conductor.contracts import Escalation, FieldProblem
 from conductor.events import EventKind, EventLog
+from conductor.llm.decide import InvalidModelOutput, escalation_for
 from conductor.llm.model import ModelReply, ModelUnavailable
 from conductor.llm.points import build_request
-from conductor.llm.scripted import ScriptedModel, ScriptedReply
+from conductor.llm.scripted import ScriptedModel, ScriptedReply, ScriptError
 from conductor.planning.answer import (
     ANSWER_POINT,
     RESULTS_MESSAGE,
@@ -158,3 +159,53 @@ def test_the_request_is_checked_as_in_routing(tmp_path: Path) -> None:
     with pytest.raises(ValueError) as raised:
         answer(NoModel(), EventLog(tmp_path), request="   ")
     assert str(raised.value) == REQUEST_MESSAGE
+
+
+ONE = (StepOutcome(step=1, action="demo.echo", output={"text": "hi"}),)
+
+
+def answer_moved(request: str, results, model, log: EventLog):
+    return answer_request(request, results, model=model, model_name=MODEL, log=log, run_id=RUN)
+
+
+def test_a_full_request_and_eight_results_reach_the_model_and_the_request_is_first(
+    tmp_path: Path,
+) -> None:
+    results = tuple(
+        StepOutcome(step=number, action="demo.echo", output={"text": "hi"})
+        for number in range(1, 9)
+    )
+    model = ScriptedModel([ScriptedReply("answer", ModelReply(content='{"reply": "Done."}'))])
+    found = answer_moved("x" * 2000, results, model, EventLog(tmp_path))
+    assert found == Answered("Done.", DECISION)
+    assert '"request": "' + "x" * 2000 + '"' in model.requests[0].user
+    with pytest.raises(ValueError) as raised:
+        answer_moved("y" * 2001, (), ScriptedModel([]), EventLog(tmp_path))
+    assert str(raised.value) == REQUEST_MESSAGE
+    assert str(raised.value) != RESULTS_MESSAGE
+
+
+def test_an_invalid_reply_is_the_escalation_and_a_script_error_passes(tmp_path: Path) -> None:
+    model = ScriptedModel([ScriptedReply("answer", ModelReply(content='{"reply": 1}'))])
+    found = answer_moved("Echo hi", ONE, model, EventLog(tmp_path))
+    expected = escalation_for(
+        InvalidModelOutput(DECISION, (FieldProblem(loc="reply", code="string_type"),)),
+        RUN,
+    )
+    assert found == expected
+    with pytest.raises(ScriptError):
+        answer_moved("Echo hi", ONE, ScriptedModel([]), EventLog(tmp_path))
+
+
+def test_a_reply_of_2000_characters_is_kept_and_2001_is_too_long(tmp_path: Path) -> None:
+    kept = "x" + " " * 1999
+    model = ScriptedModel(
+        [ScriptedReply("answer", ModelReply(content='{"reply": "' + kept + '"}'))]
+    )
+    assert answer_moved("Echo hi", ONE, model, EventLog(tmp_path)) == Answered(kept, DECISION)
+    longer = ScriptedModel(
+        [ScriptedReply("answer", ModelReply(content='{"reply": "' + "y" * 2001 + '"}'))]
+    )
+    found = answer_moved("Echo hi", ONE, longer, EventLog(tmp_path))
+    assert isinstance(found, Escalation)
+    assert found.problems == (FieldProblem(loc="reply", code="string_too_long"),)
