@@ -104,15 +104,14 @@ def test_the_context_is_frozen_and_holds_three_things() -> None:
 
 
 def test_create_app_only_registers_one_line_routes() -> None:
-    body = top_functions("app")["create_app"].body
+    found = top_functions("app")
+    registrars = [found[name] for name in ("create_app", "_add_pages", "_add_forms")]
     kinds = (ast.FunctionDef, ast.AsyncFunctionDef)
-    routes = [node for node in body if isinstance(node, kinds)]
-    assert len(routes) == 10
+    routes = [node for function in registrars for node in function.body if isinstance(node, kinds)]
     assert [len(route.body) for route in routes] == [1] * 10
     assert {type(route.body[0]).__name__ for route in routes} == {"Return"}
-    assert [
-        node for node in ast.walk(top_functions("app")["create_app"]) if isinstance(node, ast.Try)
-    ] == []
+    tries = [node for function in registrars for node in ast.walk(function)]
+    assert [node for node in tries if isinstance(node, ast.Try)] == []
 
 
 def test_each_decision_state_read_and_resume_start_is_written_once() -> None:

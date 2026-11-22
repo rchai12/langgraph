@@ -371,10 +371,7 @@ def _context(settings: Settings, resumer: Resumer | None) -> Context:
     )
 
 
-def create_app(settings: Settings, *, resumer: Resumer | None = None) -> ASGIApp:
-    ctx = _context(settings, resumer)
-    api = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
-
+def _add_pages(api: FastAPI, ctx: Context) -> None:
     @api.get("/")
     def get_home(request: Request) -> Response:
         return home(ctx, request)
@@ -391,6 +388,8 @@ def create_app(settings: Settings, *, resumer: Resumer | None = None) -> ASGIApp
     def get_run(run_id: str, request: Request) -> Response:
         return run_page(ctx, run_id, request)
 
+
+def _add_forms(api: FastAPI, ctx: Context) -> None:
     @api.post("/runs/{run_id}/resume")
     async def resume(run_id: str, request: Request) -> Response:
         return await post_resume(ctx, run_id, request)
@@ -415,4 +414,10 @@ def create_app(settings: Settings, *, resumer: Resumer | None = None) -> ASGIApp
     async def cancel(escalation_id: str, request: Request) -> Response:
         return await post_escalation(ctx, escalation_id, request, "cancel")
 
+
+def create_app(settings: Settings, *, resumer: Resumer | None = None) -> ASGIApp:
+    ctx = _context(settings, resumer)
+    api = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
+    _add_pages(api, ctx)
+    _add_forms(api, ctx)
     return security.HostGuard(api, settings.web_port_number)
